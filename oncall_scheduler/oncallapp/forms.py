@@ -1,5 +1,5 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, DateField
+from wtforms import StringField, SubmitField, SelectField, DateField, BooleanField, DateTimeField
 from wtforms.validators import DataRequired
 from oncallapp.models import UserGroup, User
 
@@ -34,3 +34,15 @@ class CreateUserForm(FlaskForm):
         super(CreateUserForm, self).__init__(*args, **kwargs)
         self.group.choices = [(group.id, group.name) for group in UserGroup.query.all()]
         print(f"Group Choices: {self.group.choices}", flush=True)  # Debugging line
+
+class CreateScheduleTemplateForm(FlaskForm):
+    name = StringField('Template Name', validators=[DataRequired()])
+    group = SelectField('User Group', coerce=int, validators=[DataRequired()])
+    start_date = DateTimeField('Start Date', format='%Y-%m-%d %H:%M', validators=[DataRequired()])
+    end_date = DateTimeField('End Date', format='%Y-%m-%d %H:%M', validators=[DataRequired()])
+    repeat_weekly = BooleanField('Repeat Weekly')
+    submit = SubmitField('Create Template')
+
+    def __init__(self, group_id=None, *args, **kwargs):
+        super(CreateScheduleTemplateForm, self).__init__(*args, **kwargs)
+        self.group.choices = [(group.id, group.name) for group in UserGroup.query.all()]
