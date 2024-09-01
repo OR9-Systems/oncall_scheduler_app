@@ -1,0 +1,76 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyo
+
+# Build and distribution directories
+build/
+dist/
+*.egg-info/
+*.egg
+*.whl
+
+# Virtual environment directories
+venv/
+env/
+.venv/
+.env/
+s_ui/
+
+# Database files
+*.db
+*.sqlite3
+
+# Secrets directory
+secrets/
+
+# Log files
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/editor specific files
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+*.idea/
+*.vscode/
+
+# Flask instance folder
+instance/
+
+# Flask migrations folder
+migrations/
+
+# Python Wheel and Egg files
+*.egg
+*.egg-info/
+*.whl
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Coverage reports
+.coverage
+*.cover
+*.gcov
+*.hypothesis/
+*.nib
+nosetests.xml
+coverage.xml
+*.tox
+*.nox
+*.coverage
+*.hypothesis/
+*.tox/
+*.nox/
+*.coverage
+
+# Pytest cache
+.cache/
+*.pytest_cache/
