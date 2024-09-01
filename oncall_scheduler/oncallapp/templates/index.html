@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>On-Call Schedule</h1>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Time Segment</th>
+            <th>User</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for schedule in schedules %}
+        <tr>
+            <td>{{ schedule.date }}</td>
+            <td>{{ schedule.time_segment }}</td>
+            <td>{{ schedule.user.name }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

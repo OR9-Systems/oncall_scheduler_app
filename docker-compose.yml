@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    environment:
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - SQLALCHEMY_ECHO=True
+      - SECRET_KEY=your_secret_key
+      - DB_HOST=db
+      - PORT=5000
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+    depends_on:
+      - db
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: oncall_scheduler
+    secrets:
+      - db_user
+      - db_password
+      - db_name
+
+volumes:
+  postgres_data:
+
+secrets:
+  db_user:
+    file: ./secrets/db_user
+  db_password:
+    file: ./secrets/db_password
+  db_name:
+    file: ./secrets/db_name
