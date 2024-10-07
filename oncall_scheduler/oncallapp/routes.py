@@ -1,7 +1,7 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from oncallapp import app, db
-from oncallapp.forms import CreateUserGroupForm, CreateScheduleForm, CreateUserForm
-from oncallapp.models import UserGroup, Schedule, User
+from oncallapp.forms import CreateUserGroupForm, CreateScheduleForm, CreateUserForm, CreateScheduleTemplateForm
+from oncallapp.models import UserGroup, Schedule, User, ScheduleTemplate, TemplateEvent
 
 @app.route('/')
 def index():
@@ -90,10 +90,105 @@ def create_schedule():
     return render_template('create_schedule.html', form=form)
 
 
-
+@app.route('/ecworks')
+def ec_works():
+    return render_template('Event Calendar.htm')
 
 
 @app.route('/view_schedule')
 def view_schedule():
     schedules = Schedule.query.all()
     return render_template('view_schedule.html', schedules=schedules)
+
+
+
+
+
+
+@app.route('/create_template', methods=['GET', 'POST'])
+def create_template():
+    form = CreateScheduleTemplateForm()
+    
+    if request.method == 'POST':
+        group_id = request.form.get('group', type=int)
+    else:
+        group_id = request.args.get('group', type=int) or (UserGroup.query.first().id if UserGroup.query.first() else None)
+
+
+    if form.validate_on_submit():
+        template = ScheduleTemplate(
+            name=form.name.data,
+            start_date=form.start_date.data,
+            end_date=form.end_date.data,
+            repeat_weekly=form.repeat_weekly.data
+        )
+        db.session.add(template)
+        db.session.commit()
+        
+        # Add the events to the TemplateEvent model
+        events = request.json.get('events', [])
+        for event in events:
+            template_event = TemplateEvent(
+                title=event['title'],
+                start=event['start'],
+                end=event['end'],
+                all_day=event.get('all_day', False),
+                template_id=template.id,
+                user_id=None,
+                group_id=event.get('group_id')
+            )
+            db.session.add(template_event)
+        
+        db.session.commit()
+        flash('Schedule template created successfully!')
+        return redirect(url_for('view_templates'))
+    
+    return render_template('create_template.html', form=form)
+
+
+@app.route('/view_templates')
+def view_templates():
+    templates = ScheduleTemplate.query.all()
+    return render_template('view_templates.html', templates=templates)
+
+
+
+
+
+@app.route('/save_event', methods=['POST'])
+def save_event():
+    event_data = request.get_json()
+    print(f"Received Event Data: {event_data}", flush=True)  # Debugging line
+    event_id = event_data.get('id',None)
+    start_time = event_data.get('start',None)
+    end_time = event_data.get('end',None)
+    resource_id = event_data.get('resourceId',None)
+
+
+     # Check if start_time and end_time are in correct format (datetime, etc.)
+    if not start_time or not end_time:
+        return jsonify({'status': 'error', 'message': 'Invalid time data provided.'}), 400
+
+    # If the event already exists, update it; otherwise, create a new one
+    if event_id:
+        all_items = Schedule.query.all()
+        print(f"Received Items: {all_items}", flush=True)  # The event exists
+
+        event = Schedule.query.get(event_id)
+        if event:
+            event.start_time = start_time
+            event.end_time = end_time
+            event.resource_id = resource_id
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Event updated successfully.'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Event not found.'}), 404
+    else:
+        event = Schedule(
+            start_time=start_time,
+            end_time=end_time,
+            resource_id=resource_id
+        )
+        db.session.add(event)
+    db.session.commit()
+    return jsonify({'status': 'success'})

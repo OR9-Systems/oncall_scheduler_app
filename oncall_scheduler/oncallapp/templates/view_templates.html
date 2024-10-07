@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>View Schedule Templates</h1>
+
+<div id="calendar"></div>
+
+<!-- Display the list of templates in a table as well -->
+<h2>Template List</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Repeats Weekly</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for template in templates %}
+        <tr>
+            <td>{{ template.name }}</td>
+            <td>{{ template.start_date }}</td>
+            <td>{{ template.end_date }}</td>
+            <td>{{ 'Yes' if template.repeat_weekly else 'No' }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{{ url_for('create_template') }}" class="btn btn-primary">Create New Template</a>
+
+<script>
+    $(document).ready(function () {
+        $('#calendar').fullCalendar({
+            editable: true,
+            events: [
+                {% for template in templates %}
+                {
+                title: '{{ template.name }}',
+                start: '{{ template.start_date }}',
+                end: '{{ template.end_date }}',
+                allDay: true,
+                extendedProps: {
+                    repeatWeekly: {{ template.repeat_weekly | tojson }},
+        templateId: {{ template.id }}
+                    }
+                },
+        {% endfor %}
+            ],
+        eventDrop: function (event, delta, revertFunc) {
+            // Handle drag and drop events, possibly via AJAX
+            console.log('Event dropped:', event);
+        },
+        eventResize: function (event, delta, revertFunc) {
+            // Handle event resize, possibly via AJAX
+            console.log('Event resized:', event);
+        },
+        eventClick: function (event) {
+            alert('Template: ' + event.title);
+        }
+        });
+    });
+</script>
+
+{% endblock %}
