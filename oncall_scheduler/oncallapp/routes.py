@@ -153,21 +153,36 @@ def view_templates():
 
 
 
+
+
 @app.route('/save_event', methods=['POST'])
 def save_event():
     event_data = request.get_json()
-    event_id = event_data.get('id')
-    start_time = event_data.get('start')
-    end_time = event_data.get('end')
-    resource_id = event_data.get('resourceId')
+    print(f"Received Event Data: {event_data}", flush=True)  # Debugging line
+    event_id = event_data.get('id',None)
+    start_time = event_data.get('start',None)
+    end_time = event_data.get('end',None)
+    resource_id = event_data.get('resourceId',None)
+
+
+     # Check if start_time and end_time are in correct format (datetime, etc.)
+    if not start_time or not end_time:
+        return jsonify({'status': 'error', 'message': 'Invalid time data provided.'}), 400
 
     # If the event already exists, update it; otherwise, create a new one
     if event_id:
+        all_items = Schedule.query.all()
+        print(f"Received Items: {all_items}", flush=True)  # The event exists
+
         event = Schedule.query.get(event_id)
         if event:
             event.start_time = start_time
             event.end_time = end_time
             event.resource_id = resource_id
+            db.session.commit()
+            return jsonify({'status': 'success', 'message': 'Event updated successfully.'})
+        else:
+            return jsonify({'status': 'error', 'message': 'Event not found.'}), 404
     else:
         event = Schedule(
             start_time=start_time,
@@ -175,6 +190,5 @@ def save_event():
             resource_id=resource_id
         )
         db.session.add(event)
-
     db.session.commit()
     return jsonify({'status': 'success'})
