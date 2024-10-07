@@ -19,11 +19,12 @@ class Schedule(db.Model):
 
 
 class ScheduleTemplate(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True,autoincrement=True)
     name = db.Column(db.String(64), nullable=False)
     start_date = db.Column(db.Date, nullable=False)
     end_date = db.Column(db.Date, nullable=False)
     repeat_weekly = db.Column(db.Boolean, default=True)
+    test_mode = db.Column(db.Boolean, default=False) 
 
     template_items = db.relationship('ScheduleTemplateItem', backref='template', lazy=True)
 
@@ -38,7 +39,6 @@ class ScheduleTemplateItem(db.Model):
     group = db.relationship('UserGroup', backref='template_items')
 
 
-
 class TemplateEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
@@ -48,6 +48,7 @@ class TemplateEvent(db.Model):
     template_id = db.Column(db.Integer, db.ForeignKey('schedule_template.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     group_id = db.Column(db.Integer, db.ForeignKey('user_group.id'), nullable=True)
-    
+    resource_id = db.Column(db.Integer, nullable=True)  # Add this line
+
     def __repr__(self):
         return f'<TemplateEvent {self.title}>'

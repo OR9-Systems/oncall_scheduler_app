@@ -34,110 +34,347 @@
 
 
 <script type="text/javascript">
-      const ec = new EventCalendar(document.getElementById('ec'), {
-            view: 'timeGridWeek',
-            headerToolbar: {
-                start: 'prev,next today',
-                center: 'title',
-                end: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek resourceTimeGridWeek,resourceTimelineWeek'
-            },
-            resources: [
-                { id: 1, title: 'Onshore' },
-                { id: 2, title: 'Offshore' }
-            ],
-            scrollTime: '09:00:00',
-            events: createEvents(),
-            views: {
-                timeGridWeek: { pointer: true },
-                resourceTimeGridWeek: { pointer: true },
-                resourceTimelineWeek: {
-                    pointer: true,
-                    slotMinTime: '09:00',
-                    slotMaxTime: '21:00',
-                    slotWidth: 80,
-                    resources: [
-                        { id: 1, title: 'Onshore' },
-                        { id: 2, title: 'Offshore' },
-                        { id: 3, title: 'Resource C' },
-                        { id: 4, title: 'Resource D' },
-                        { id: 5, title: 'Resource E' },
-                        { id: 6, title: 'Resource F' },
-                        { id: 7, title: 'Resource G' },
-                        { id: 8, title: 'Resource H' },
-                        { id: 9, title: 'Resource I' },
-                        { id: 10, title: 'Resource J' },
-                        { id: 11, title: 'Resource K' },
-                        { id: 12, title: 'Resource L' },
-                        { id: 13, title: 'Resource M' },
-                        { id: 14, title: 'Resource N' },
-                        { id: 15, title: 'Resource O' }
-                    ]
-                }
-            },
-            dayMaxEvents: true,
-            nowIndicator: true,
-            selectable: true,
-            editable: true,
-            eventDrop: function (info) {
-              saveEvent(info.event);
-          },
-          eventResize: function (info) {
-              saveEvent(info.event);
-          }
-        });
 
-        function createEvents() {
-            let days = [];
-            for (let i = 0; i < 7; ++i) {
-                let day = new Date();
-                let diff = i - day.getDay();
-                day.setDate(day.getDate() + diff);
-                days[i] = day.getFullYear() + "-" + _pad(day.getMonth() + 1) + "-" + _pad(day.getDate());
+         let typingEvent = null; // Store reference to the event being typed
+         let typingListenerAdded = false;
+         let currentHoveredEvent = null; 
+        function initCalendar(templateId) {
+                createEvents(templateId).then(events => {
+                    console.log("Events to pass into the calendar:", events);
+
+                    const ec = new EventCalendar(document.getElementById('ec'), {
+                        view: 'timeGridWeek',
+                        headerToolbar: {
+                            start: 'prev,next today',
+                            center: 'title',
+                            end: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek resourceTimeGridWeek,resourceTimelineWeek'
+                        },
+                        resources: [
+                            { id: 1, title: 'Onshore' },
+                            { id: 2, title: 'Offshore' }
+                        ],
+                        scrollTime: '09:00:00',
+                        events: events,  // Pass resolved events array here
+                        views: {
+                            timeGridWeek: { pointer: true },
+                            resourceTimeGridWeek: { pointer: true },
+                            resourceTimelineWeek: {
+                                pointer: true,
+                                slotMinTime: '09:00',
+                                slotMaxTime: '21:00',
+                                slotWidth: 80,
+                                resources: [
+                                    { id: 1, title: 'Onshore' },
+                                    { id: 2, title: 'Offshore' },
+                                    { id: 3, title: 'Resource C' },
+                                    { id: 4, title: 'Resource D' },
+                                    { id: 5, title: 'Resource E' },
+                                    { id: 6, title: 'Resource F' },
+                                    { id: 7, title: 'Resource G' },
+                                    { id: 8, title: 'Resource H' },
+                                    { id: 9, title: 'Resource I' },
+                                    { id: 10, title: 'Resource J' },
+                                    { id: 11, title: 'Resource K' },
+                                    { id: 12, title: 'Resource L' },
+                                    { id: 13, title: 'Resource M' },
+                                    { id: 14, title: 'Resource N' },
+                                    { id: 15, title: 'Resource O' }
+                                ]
+                            }
+                        },
+                        dayMaxEvents: true,
+                        nowIndicator: true,
+                        selectable: true,
+                        editable: true,
+                         select: function(info) {
+                            console.log("Selected time range:", info);
+
+                            // Initialize typing for creating an event
+                            if (!typingListenerAdded) {
+                                document.addEventListener('keypress', handleTyping, { once: true });  // Add listener only once
+                                typingListenerAdded = true;
+                            }
+
+                            function handleTyping(event) {
+                                const inputChar = String.fromCharCode(event.which);
+                                if (inputChar) {
+                                    if (!typingEvent) {
+                                        // Create a new event on the first keypress
+                                        typingEvent = ec.addEvent({
+                                            title: inputChar,
+                                            start: info.start.toISOString(),
+                                            end: info.end.toISOString(),
+                                            resourceId: info.resource ? info.resource.id : null
+                                        });
+                                        saveEvent(typingEvent, templateId);
+                                    } else {
+                                        // Use updateEvent() to append characters to the existing event's title
+                                        typingEvent.title =  (typingEvent.title + inputChar);
+                                        //ec.updateEvent(typingEvent);  // Use updateEvent to make the changes in the calendar
+                                        saveEvent(typingEvent, templateId);  // Save the updated event
+                                    }
+                                }
+
+                                // After typing is done, reset the listener and typing event
+                                typingListenerAdded = false;
+                                typingEvent = null;
+                            }
+                        },
+                        eventDrop: function (info) {
+                            saveEvent(info.event, templateId);
+                        },
+                        eventResize: function (info) {
+                            saveEvent(info.event, templateId);
+                        },
+                         eventMouseEnter: function (info) {
+                            currentHoveredEvent = info.event;  // Set the hovered event
+                        },
+                        eventMouseLeave: function (info) {
+                            currentHoveredEvent = null; 
+                            document.removeEventListener('keydown', null);
+                         // Clear the hovered event when the mouse leaves
+                        }
+                            });
+                          document.addEventListener('keydown', (event) => {
+            if ((event.key === 'Backspace' || event.key === 'Delete') && currentHoveredEvent) {
+                console.log("Deleting event with ID:", currentHoveredEvent.id);
+                ec.removeEventById(currentHoveredEvent.id);
+                deleteEvent(currentHoveredEvent.id, templateId);  // Call backend to delete event
+                currentHoveredEvent = null;  // Clear hovered event after deletion
             }
 
-            return [
-                { start: days[0] + " 00:00", end: days[0] + " 09:00", resourceId: 1, display: "background" },
-                { start: days[1] + " 12:00", end: days[1] + " 14:00", resourceId: 2, display: "background" },
-                { start: days[2] + " 17:00", end: days[2] + " 24:00", resourceId: 1, display: "background" },
-                { start: days[0] + " 10:00", end: days[0] + " 14:00", resourceId: 1, title: "The calendar can display background and regular events", color: "#FE6B64" },
-                { start: days[1] + " 16:00", end: days[2] + " 08:00", resourceId: 2, title: "An event may span to another day", color: "#B29DD9" },
-                { start: days[2] + " 09:00", end: days[2] + " 13:00", resourceId: 2, title: "Events can be assigned to resources and the calendar has the resources view built-in", color: "#779ECB" },
-                { start: days[3] + " 14:00", end: days[3] + " 20:00", resourceId: 1, title: "", color: "#FE6B64" },
-                { start: days[3] + " 15:00", end: days[3] + " 18:00", resourceId: 1, title: "Overlapping events are positioned properly", color: "#779ECB" },
-                { start: days[5] + " 10:00", end: days[5] + " 16:00", resourceId: 2, title: { html: "You have complete control over the <i><b>display</b></i> of events…" }, color: "#779ECB" },
-                { start: days[5] + " 14:00", end: days[5] + " 19:00", resourceId: 2, title: "…and you can drag and drop the events!", color: "#FE6B64" },
-                { start: days[5] + " 18:00", end: days[5] + " 21:00", resourceId: 2, title: "", color: "#B29DD9" },
-                { start: days[1], end: days[3], resourceId: 1, title: "All-day events can be displayed at the top", color: "#B29DD9", allDay: true }
-            ];
+                    });
+                }).catch(error => {
+                    console.error('Error initializing calendar:', error);
+                });
+            }
+
+            // Call initCalendar after document is ready
+            document.addEventListener('DOMContentLoaded', function () {
+                const templateId = `{{ template.id if template else session['template_id'] }}`;
+                console.log("Template ID from session:", templateId);
+                initCalendar(templateId);  // Initialize calendar with template ID
+            });
+
+
+
+    // Function to fetch or create events with logging
+    function createEvents(templateId) {
+        console.log("Fetching events for template ID:", templateId);
+
+
+         if (!templateId) {
+            console.error("No template ID provided. Using default events.");
+            return initializeDefaultEvents();
         }
 
-         function saveEvent(event) {
+
+        return fetch(`/load_events/${templateId}`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok.');
+                }
+                return response.json();
+            })
+            .then(events => {
+                if (events.length === 0) {
+                    console.log("No events found, initializing default events.");
+                    let defaultEvents = initializeDefaultEvents();
+
+                    // Save default events (optional)
+                    defaultEvents.forEach(event => {
+                        console.log("Saving default event:", event);
+                        saveEvent(event, templateId);
+                    });
+
+                    return defaultEvents;
+                } else {
+                    console.log("Events loaded from the database:", events);
+                    return events.map(event => ({
+                        id: event.id,
+                        start: event.start,
+                        end: event.end,
+                        resourceId: event.resourceId,
+                        title: event.title
+                    }));
+                }
+            })
+            .catch(error => {
+                console.error('Error loading events:', error);
+                // Return default events if the fetch fails
+                return initializeDefaultEvents();
+            });
+    }
+
+    function initializeDefaultEvents(templateId) {
+        console.log("Initializing default events...");
+        let days = [];
+        for (let i = 0; i < 7; ++i) {
+            let day = new Date();
+            let diff = i - day.getDay();
+            day.setDate(day.getDate() + diff);
+            days[i] = day.getFullYear() + "-" + _pad(day.getMonth() + 1) + "-" + _pad(day.getDate());
+        }
+
+        const defaultEvents = [
+            { id: 1, start: days[0] + " 00:00", end: days[0] + " 09:00", resourceId: 1, display: "background", template_id: templateId },
+            { id: 2, start: days[1] + " 12:00", end: days[1] + " 14:00", resourceId: 2, display: "background", template_id: templateId },
+            { id: 3, start: days[2] + " 17:00", end: days[2] + " 24:00", resourceId: 1, display: "background", template_id: templateId },
+            { id: 4, start: days[0] + " 10:00", end: days[0] + " 14:00", resourceId: 1, title: "The calendar can display background and regular events", color: "#FE6B64", template_id: templateId },
+            { id: 5, start: days[1] + " 16:00", end: days[2] + " 08:00", resourceId: 2, title: "An event may span to another day", color: "#B29DD9", template_id: templateId },
+            { id: 6, start: days[2] + " 09:00", end: days[2] + " 13:00", resourceId: 2, title: "Events can be assigned to resources and the calendar has the resources view built-in", color: "#779ECB", template_id: templateId },
+            { id: 7, start: days[3] + " 14:00", end: days[3] + " 20:00", resourceId: 1, title: "", color: "#FE6B64", template_id: templateId },
+            { id: 8, start: days[3] + " 15:00", end: days[3] + " 18:00", resourceId: 1, title: "Overlapping events are positioned properly", color: "#779ECB", template_id: templateId },
+            { id: 10, start: days[5] + " 14:00", end: days[5] + " 19:00", resourceId: 2, title: "…and you can drag and drop the events!", color: "#FE6B64", template_id: templateId },
+            { id: 11, start: days[5] + " 18:00", end: days[5] + " 21:00", resourceId: 2, title: "", color: "#B29DD9", template_id: templateId },
+            { id: 12, start: days[1], end: days[3], resourceId: 1, title: "All-day events can be displayed at the top", color: "#B29DD9", allDay: true, template_id: templateId }
+        ];
+
+        console.log("Default events initialized:", defaultEvents);
+
+        // Save each event to the backend
+        defaultEvents.forEach(event => {
+            saveEvent(event, templateId);
+        });
+
+        return defaultEvents;
+    }
+
+
+    
+         // Function to save an event to the backend
+            function saveEvent(event, templateId) {
+                let startDate = typeof event.start === 'string' ? new Date(event.start) : event.start;
+                let endDate = typeof event.end === 'string' ? new Date(event.end) : event.end;
+                const resourceId = event.resourceId ? event.resourceId : null;
+
+
+                 // UTC to Non Utc Conversion 
+
+                 startDate.setHours(startDate.getHours() - 4);
+                if (endDate) {
+                    endDate.setHours(endDate.getHours() - 4);
+                }
+
+
                 const eventData = {
                     id: event.id,
-                    title: event.title,
-                    start: event.start.toISOString(),
-                    end: event.end ? event.end.toISOString() : null,
-                    resourceId: event.extendedProps.resourceId
+                    title: event.title || '',
+                    start: startDate.toISOString(),
+                    end: endDate ? endDate.toISOString() : null,
+                    resourceId: resourceId,
+                    template_id: templateId
                 };
+
+                console.log("Saving event to the backend:", eventData);
 
                 fetch('{{ url_for("save_event") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ form.csrf_token._value() }}'  // Include CSRF token for security
+                        'X-CSRFToken': '{{ form.csrf_token._value() }}'
                     },
                     body: JSON.stringify(eventData)
                 }).then(response => {
-                    if (!response.ok) {
-                        alert('Failed to save event');
-                    }
+                    return response.json().then(data => {
+                        if (!response.ok) {
+                            console.error('Failed to save event:', data.message);
+                            //alert('Failed to save event: ' + data.message);
+                        } else {
+                            console.log("Event saved successfully:", data);
+                            event.id = data.event_id;
+                            ec.updateEvent(event);
+                        }
+                    });
+                }).catch(error => {
+                    console.error('Error during event saving:', error);
                 });
             }
 
-        function _pad(num) {
-            let norm = Math.floor(Math.abs(num));
-            return (norm < 10 ? '0' : '') + norm;
+
+    // Sync all events with the backend (including deleted events)
+        function syncEvents(calendar, templateId) {
+            const events = calendar.getEvents().map(event => {
+                // Convert start and end dates to the correct time format
+                let startDate = typeof event.start === 'string' ? new Date(event.start) : event.start;
+                let endDate = typeof event.end === 'string' ? new Date(event.end) : event.end;
+
+                // Adjust the hours for UTC to non-UTC conversion (to match the backend logic)
+                startDate.setHours(startDate.getHours() - 4);
+                if (endDate) {
+                    endDate.setHours(endDate.getHours() - 4);
+                }
+
+                return {
+                    id: event.id,
+                    title: event.title || 'Untitled Event',
+                    start: startDate.toISOString(),
+                    end: endDate ? endDate.toISOString() : null,
+                    resourceId: event.resourceId || null,
+                    group_id: event.extendedProps.group_id || null,
+                    all_day: event.allDay || false
+                };
+            });
+
+            fetch('/sync_events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                },
+                body: JSON.stringify({
+                    template_id: templateId,
+                    events: events
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('Events synchronized successfully.');
+                    } else {
+                        console.error('Failed to sync events:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error syncing events:', error);
+                });
         }
+
+
+        function deleteEvent(eventId, templateId) {
+                const eventData = {
+                    id: eventId,
+                    template_id: templateId
+                };
+
+                console.log("Deleting event from the backend:", eventData);
+
+                fetch('{{ url_for("delete_event") }}', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                    },
+                    body: JSON.stringify(eventData)
+                }).then(response => {
+                    return response.json().then(data => {
+                        if (!response.ok) {
+                            console.error('Failed to delete event:', data.message);
+                            alert('Failed to delete event: ' + data.message);
+                        } else {
+                            console.log("Event deleted successfully:", data);
+                        }
+                    });
+                }).catch(error => {
+                    console.error('Error during event deletion:', error);
+                });
+            }
+
+    // Helper function to pad numbers (for date formatting)
+    function _pad(num) {
+        let norm = Math.floor(Math.abs(num));
+        return (norm < 10 ? '0' : '') + norm;
+    }
 </script>
 
 <style>
