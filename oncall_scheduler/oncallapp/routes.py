@@ -154,44 +154,82 @@ def create_template():
 
     return render_template('create_template.html', form=form, template=template)
 
+@app.route('/sync_events', methods=['POST'])
+def sync_events():
+    data = request.get_json()
+    template_id = data.get('template_id')
+    events = data.get('events', [])
+    
+    if not template_id:
+        return jsonify({'status': 'error', 'message': 'Template ID is required.'}), 400
+    
+    try:
+        sync_template_events(template_id, events)
+        return jsonify({'status': 'success', 'message': 'Events synchronized successfully.'})
+    except Exception as e:
+        print(f"Error during sync: {e}", flush=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
-def sync_template_events(template_id, events_from_frontend):
-    """
-    Syncs the TemplateEvent table with the events sent from the frontend.
-    Handles adding new events, updating existing ones, and deleting removed events.
-    """
+
+
+def sync_template_events(template_id, received_events):
+    # Fetch all existing events for this template
     existing_events = TemplateEvent.query.filter_by(template_id=template_id).all()
-    existing_events_dict = {event.id: event for event in existing_events}
+    
+    # Convert existing events to a dict with id as key for fast lookup
+    existing_event_dict = {event.id: event for event in existing_events}
 
-    frontend_event_ids = set()
-    for event_data in events_from_frontend:
+    # Track ids of events to keep
+    received_event_ids = set()
+
+    # Process received events
+    for event_data in received_events:
         event_id = event_data.get('id')
-        frontend_event_ids.add(event_id)
+        received_event_ids.add(event_id)
 
-        if event_id in existing_events_dict:
-            event = existing_events_dict[event_id]
-            event.title = event_data.get('title', event.title)
-            event.start = event_data.get('start', event.start)
-            event.end = event_data.get('end', event.end)
-            event.all_day = event_data.get('all_day', event.all_day)
-            event.group_id = event_data.get('group_id', event.group_id)
+        # Get start and end time strings from the event data
+        start_time_str = event_data['start']
+        end_time_str = event_data['end']
+
+        # Convert the date strings to datetime objects
+        try:
+            # Parse ISO 8601 strings using dateutil.parser.parse
+            start_time = parser.parse(start_time_str)
+            end_time = parser.parse(end_time_str)
+        except ValueError as e:
+            print(f"Date parsing error: {e}", flush=True)
+            return jsonify({'status': 'error', 'message': 'Invalid date format.'}), 400
+
+        if event_id in existing_event_dict:
+            # Update existing event
+            event = existing_event_dict[event_id]
+            event.title = event_data['title']
+            event.start = start_time
+            event.end = end_time
+            event.resource_id = event_data['resourceId']
+            event.all_day = event_data.get('allDay', False)
         else:
+            # Create new event
             new_event = TemplateEvent(
+                id=event_data.get('id'),  # Usually auto-generated, but might be passed
                 title=event_data['title'],
-                start=event_data['start'],
-                end=event_data['end'],
-                all_day=event_data.get('all_day', False),
+                start=start_time,
+                end=end_time,
+                resource_id=event_data['resourceId'],
+                all_day=event_data.get('allDay', False),
                 template_id=template_id,
-                group_id=event_data.get('group_id')
             )
             db.session.add(new_event)
 
-    # Delete events that no longer exist
-    for event_id, event in existing_events_dict.items():
-        if event_id not in frontend_event_ids:
+    # Delete events that are not in received_event_ids
+    for event in existing_events:
+        if event.id not in received_event_ids:
             db.session.delete(event)
 
+    # Commit changes
     db.session.commit()
+
+    return {"status": "success"}
 
 @app.route('/view_templates')
 def view_templates():
@@ -201,9 +239,10 @@ def view_templates():
 @app.route('/save_event', methods=['POST'])
 def save_event():
     event_data = request.get_json()
-    print(f"Received Event Data: {event_data}", flush=True)  # Debugging line
-    
-    event_id = event_data.get('id', None)
+    print(f"Received Event Data: {event_data}", flush=True)
+
+    # Extract data from the incoming event JSON
+    event_id = event_data.get('id', None)  # Could be {generated-1}, or None for new events
     start_time_str = event_data.get('start', None)
     end_time_str = event_data.get('end', None)
     resource_id = event_data.get('resourceId', None)
@@ -212,27 +251,23 @@ def save_event():
     if not template_id:
         return jsonify({'status': 'error', 'message': 'Template ID is required.'}), 400
 
-    # Validate required data
     if not start_time_str or not end_time_str:
         return jsonify({'status': 'error', 'message': 'Start and end time are required.'}), 400
 
-    # Convert the date strings to datetime objects
-    # Convert the date strings to datetime objects
+    # Parse the start and end times
     try:
-        # Parse ISO 8601 strings using dateutil.parser.parse
         start_time = parser.parse(start_time_str)
         end_time = parser.parse(end_time_str)
     except ValueError as e:
         print(f"Date parsing error: {e}", flush=True)
         return jsonify({'status': 'error', 'message': 'Invalid date format.'}), 400
 
+    # Handle the case where event_id is numeric
+    if isinstance(event_id, str) and event_id.isnumeric():
+        event_id = int(event_id)
 
-    # Log current state of TemplateEvent items
-    all_events = TemplateEvent.query.all()
-    print(f"All Template Events Before Save: {[event.__dict__ for event in all_events]}", flush=True)
-
-    # Update the event if it already exists
-    if event_id:
+    # Update an existing event if the event ID is valid (numeric)
+    if event_id and isinstance(event_id, int):
         event = TemplateEvent.query.get(event_id)
         if event:
             print(f"Updating Event: {event_id}", flush=True)
@@ -243,12 +278,10 @@ def save_event():
             event.group_id = event_data.get('group_id', event.group_id)
             db.session.commit()
             print(f"Event {event_id} updated successfully.", flush=True)
-            return jsonify({'status': 'success', 'message': 'Event updated successfully.'})
-        else:
-            print(f"Event ID {event_id} not found, creating new event.", flush=True)
+            return jsonify({'status': 'success', 'message': 'Event updated successfully.', 'event_id': event.id})
 
-    # Create a new event if it doesn't exist
-    print("Creating new event", flush=True)
+    # Create a new event if no valid numeric ID is provided (new event creation)
+    print(f"Creating new event", flush=True)
     new_event = TemplateEvent(
         title=event_data.get('title', 'Untitled Event'),
         start=start_time,
@@ -262,14 +295,7 @@ def save_event():
     db.session.commit()
 
     print(f"New event created with ID: {new_event.id}", flush=True)
-
-    # Log all events after creation
-    all_events_after_create = TemplateEvent.query.all()
-    print(f"All Template Events After Create: {[event.__dict__ for event in all_events_after_create]}", flush=True)
-
     return jsonify({'status': 'success', 'message': 'Event created successfully.', 'event_id': new_event.id})
-
-
 
 @app.route('/load_events/<template_id>', methods=['GET'])
 def load_events(template_id):
@@ -291,3 +317,26 @@ def load_events(template_id):
     # Return the events as a JSON response
     return jsonify(events_data)
 
+
+@app.route('/delete_event', methods=['DELETE'])
+def delete_event():
+    event_data = request.get_json()
+    event_id = event_data.get('id')
+    template_id = event_data.get('template_id')
+
+    if not event_id or not template_id:
+        return jsonify({'status': 'error', 'message': 'Event ID and Template ID are required.'}), 400
+
+    # Find the event by its ID and template ID
+    event = TemplateEvent.query.filter_by(id=event_id, template_id=template_id).first()
+
+    if not event:
+        return jsonify({'status': 'error', 'message': 'Event not found.'}), 404
+
+    # Delete the event
+    db.session.delete(event)
+    db.session.commit()
+
+    print(f"Deleted event {event_id} from template {template_id}", flush=True)
+
+    return jsonify({'status': 'success', 'message': 'Event deleted successfully.'})

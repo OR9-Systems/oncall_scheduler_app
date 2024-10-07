@@ -34,6 +34,10 @@
 
 
 <script type="text/javascript">
+
+         let typingEvent = null; // Store reference to the event being typed
+         let typingListenerAdded = false;
+         let currentHoveredEvent = null; 
         function initCalendar(templateId) {
                 createEvents(templateId).then(events => {
                     console.log("Events to pass into the calendar:", events);
@@ -82,12 +86,63 @@
                         nowIndicator: true,
                         selectable: true,
                         editable: true,
+                         select: function(info) {
+                            console.log("Selected time range:", info);
+
+                            // Initialize typing for creating an event
+                            if (!typingListenerAdded) {
+                                document.addEventListener('keypress', handleTyping, { once: true });  // Add listener only once
+                                typingListenerAdded = true;
+                            }
+
+                            function handleTyping(event) {
+                                const inputChar = String.fromCharCode(event.which);
+                                if (inputChar) {
+                                    if (!typingEvent) {
+                                        // Create a new event on the first keypress
+                                        typingEvent = ec.addEvent({
+                                            title: inputChar,
+                                            start: info.start.toISOString(),
+                                            end: info.end.toISOString(),
+                                            resourceId: info.resource ? info.resource.id : null
+                                        });
+                                        saveEvent(typingEvent, templateId);
+                                    } else {
+                                        // Use updateEvent() to append characters to the existing event's title
+                                        typingEvent.title =  (typingEvent.title + inputChar);
+                                        ec.updateEvent(typingEvent);  // Use updateEvent to make the changes in the calendar
+                                        saveEvent(typingEvent, templateId);  // Save the updated event
+                                    }
+                                }
+
+                                // After typing is done, reset the listener and typing event
+                                typingListenerAdded = false;
+                                typingEvent = null;
+                            }
+                        },
                         eventDrop: function (info) {
-                            saveEvent(info.event,templateId);
+                            saveEvent(info.event, templateId);
                         },
                         eventResize: function (info) {
-                            saveEvent(info.event,templateId);
+                            saveEvent(info.event, templateId);
+                        },
+                         eventMouseEnter: function (info) {
+                            currentHoveredEvent = info.event;  // Set the hovered event
+                        },
+                        eventMouseLeave: function (info) {
+                            currentHoveredEvent = null; 
+                            document.removeEventListener('keydown', null);
+                         // Clear the hovered event when the mouse leaves
                         }
+                            });
+                          document.addEventListener('keydown', (event) => {
+            if ((event.key === 'Backspace' || event.key === 'Delete') && currentHoveredEvent) {
+                console.log("Deleting event with ID:", currentHoveredEvent.id);
+                ec.removeEventById(currentHoveredEvent.id);
+                deleteEvent(currentHoveredEvent.id, templateId);  // Call backend to delete event
+                currentHoveredEvent = null;  // Clear hovered event after deletion
+            }
+
                     });
                 }).catch(error => {
                     console.error('Error initializing calendar:', error);
@@ -224,16 +279,94 @@
                     return response.json().then(data => {
                         if (!response.ok) {
                             console.error('Failed to save event:', data.message);
-                            alert('Failed to save event: ' + data.message);
+                            //alert('Failed to save event: ' + data.message);
                         } else {
                             console.log("Event saved successfully:", data);
-                            if (!event.id) {
-                                event.id = data.event_id;  // Update new event's id
-                            }
+                            event.id = data.event_id;
+                            ec.updateEvent(event);
                         }
                     });
                 }).catch(error => {
                     console.error('Error during event saving:', error);
+                });
+            }
+
+
+    // Sync all events with the backend (including deleted events)
+        function syncEvents(calendar, templateId) {
+            const events = calendar.getEvents().map(event => {
+                // Convert start and end dates to the correct time format
+                let startDate = typeof event.start === 'string' ? new Date(event.start) : event.start;
+                let endDate = typeof event.end === 'string' ? new Date(event.end) : event.end;
+
+                // Adjust the hours for UTC to non-UTC conversion (to match the backend logic)
+                startDate.setHours(startDate.getHours() - 4);
+                if (endDate) {
+                    endDate.setHours(endDate.getHours() - 4);
+                }
+
+                return {
+                    id: event.id,
+                    title: event.title || 'Untitled Event',
+                    start: startDate.toISOString(),
+                    end: endDate ? endDate.toISOString() : null,
+                    resourceId: event.resourceId || null,
+                    group_id: event.extendedProps.group_id || null,
+                    all_day: event.allDay || false
+                };
+            });
+
+            fetch('/sync_events', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                },
+                body: JSON.stringify({
+                    template_id: templateId,
+                    events: events
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        console.log('Events synchronized successfully.');
+                    } else {
+                        console.error('Failed to sync events:', data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error syncing events:', error);
+                });
+        }
+
+
+        function deleteEvent(eventId, templateId) {
+                const eventData = {
+                    id: eventId,
+                    template_id: templateId
+                };
+
+                console.log("Deleting event from the backend:", eventData);
+
+                fetch('{{ url_for("delete_event") }}', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ form.csrf_token._value() }}'
+                    },
+                    body: JSON.stringify(eventData)
+                }).then(response => {
+                    return response.json().then(data => {
+                        if (!response.ok) {
+                            console.error('Failed to delete event:', data.message);
+                            alert('Failed to delete event: ' + data.message);
+                        } else {
+                            console.log("Event deleted successfully:", data);
+                        }
+                    });
+                }).catch(error => {
+                    console.error('Error during event deletion:', error);
                 });
             }
 
