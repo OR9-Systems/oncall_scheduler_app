@@ -86,12 +86,22 @@
                         nowIndicator: true,
                         selectable: true,
                         editable: true,
-                         select: function(info) {
+                        select: function (info) {
                             console.log("Selected time range:", info);
+
+                            // Adjust the start and end times only when the event is created
+                            let startDate = new Date(info.start.getTime());
+                            let endDate = new Date(info.end.getTime());
+
+                            // Adjust the time zone offset for the start and end times (once, when creating the event)
+                            //startDate.setHours(startDate.getHours() + 4);
+                            //if (endDate) {
+                            //    endDate.setHours(endDate.getHours() + 4);
+                            //}
 
                             // Initialize typing for creating an event
                             if (!typingListenerAdded) {
-                                document.addEventListener('keypress', handleTyping, { once: true });  // Add listener only once
+                                document.addEventListener('keypress', handleTyping);  // Removed `{ once: true }`
                                 typingListenerAdded = true;
                             }
 
@@ -100,24 +110,42 @@
                                 if (inputChar) {
                                     if (!typingEvent) {
                                         // Create a new event on the first keypress
+                                        startDate.setHours(startDate.getHours() + -4)
+                                        endDate.setHours(endDate.getHours() + -4)
                                         typingEvent = ec.addEvent({
                                             title: inputChar,
-                                            start: info.start.toISOString(),
-                                            end: info.end.toISOString(),
+                                            start: startDate.toISOString(),  // Use adjusted start date
+                                            end: endDate.toISOString(),      // Use adjusted end date
                                             resourceId: info.resource ? info.resource.id : null
                                         });
-                                        saveEvent(typingEvent, templateId);
+                                        //saveEvent(typingEvent, templateId);  // Save the event to the backend
                                     } else {
-                                        // Use updateEvent() to append characters to the existing event's title
-                                        typingEvent.title =  (typingEvent.title + inputChar);
-                                        //ec.updateEvent(typingEvent);  // Use updateEvent to make the changes in the calendar
-                                        saveEvent(typingEvent, templateId);  // Save the updated event
+                                        //startDate.setHours(startDate.getHours() + 4)
+                                       // typingEvent.start =  (new Date(info.start.getTime())).toISOString();
+                                        //typingEvent.endDate = (new Date(info.start.getTime())).toISOString();
+                                        console.log("Selected time  In Loop:", info);
+                                    
+                                        // Append new characters to the event's title (do not adjust the time again)
+                                        typingEvent.title += inputChar;  // Directly update the event's title
+                                        //ec.updateEvent(typingEvent);     // Update the event in the calendar
+                                        // Optionally, save the updated event here if you want immediate backend sync
                                     }
                                 }
 
-                                // After typing is done, reset the listener and typing event
-                                typingListenerAdded = false;
-                                typingEvent = null;
+                                // Handle the end of typing (e.g., pressing Enter)
+                                if (event.key === 'Enter') {
+                                    //typingEvent.title += inputChar;
+                                    startDate.setHours(startDate.getHours() + 4)
+                                    endDate.setHours(endDate.getHours() + 4)
+                                    typingEvent.start = startDate.toISOString();
+                                    typingEvent.end =  endDate.toISOString();
+                                    ec.updateEvent(typingEvent); 
+                                    console.log("Selected time  In End of Function:", info);
+                                    saveEvent(typingEvent, templateId);  // Save the event to the backend after typing is done
+                                    document.removeEventListener('keypress', handleTyping);  // Remove listener after typing is done
+                                    typingListenerAdded = false;
+                                    typingEvent = null;  // Reset typing event
+                                }
                             }
                         },
                         eventDrop: function (info) {
@@ -283,7 +311,7 @@
                         } else {
                             console.log("Event saved successfully:", data);
                             event.id = data.event_id;
-                            ec.updateEvent(event);
+                            //ec.updateEvent(event);
                         }
                     });
                 }).catch(error => {
