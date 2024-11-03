@@ -34,6 +34,20 @@
 
 
 <script type="text/javascript">
+        let baseOffset =4;
+        function isDSTActive(date = new Date()) {
+                // Get the offset for January (standard time)
+                const janOffset = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
+                // Get the offset for the current date
+                const currentOffset = date.getTimezoneOffset();
+
+                // DST is active if current offset is different (less) than January's offset
+                return currentOffset < janOffset;
+            }
+
+            if (!isDSTActive()) {
+                    baseOffset += 1; // Adjust for DST (add 1 hour) extra 1h time diffrence.
+                }
 
          let typingEvent = null; // Store reference to the event being typed
          let typingListenerAdded = false;
@@ -93,12 +107,6 @@
                             let startDate = new Date(info.start.getTime());
                             let endDate = new Date(info.end.getTime());
 
-                            // Adjust the time zone offset for the start and end times (once, when creating the event)
-                            //startDate.setHours(startDate.getHours() + 4);
-                            //if (endDate) {
-                            //    endDate.setHours(endDate.getHours() + 4);
-                            //}
-
                             // Initialize typing for creating an event
                             if (!typingListenerAdded) {
                                 document.addEventListener('keypress', handleTyping);  // Removed `{ once: true }`
@@ -110,8 +118,8 @@
                                 if (inputChar) {
                                     if (!typingEvent) {
                                         // Create a new event on the first keypress
-                                        startDate.setHours(startDate.getHours() + -4)
-                                        endDate.setHours(endDate.getHours() + -4)
+                                        startDate.setHours(startDate.getHours() - baseOffset)
+                                        endDate.setHours(endDate.getHours() - baseOffset)
                                         typingEvent = ec.addEvent({
                                             title: inputChar,
                                             start: startDate.toISOString(),  // Use adjusted start date
@@ -120,23 +128,16 @@
                                         });
                                         //saveEvent(typingEvent, templateId);  // Save the event to the backend
                                     } else {
-                                        //startDate.setHours(startDate.getHours() + 4)
-                                       // typingEvent.start =  (new Date(info.start.getTime())).toISOString();
-                                        //typingEvent.endDate = (new Date(info.start.getTime())).toISOString();
                                         console.log("Selected time  In Loop:", info);
-                                    
-                                        // Append new characters to the event's title (do not adjust the time again)
-                                        typingEvent.title += inputChar;  // Directly update the event's title
-                                        //ec.updateEvent(typingEvent);     // Update the event in the calendar
-                                        // Optionally, save the updated event here if you want immediate backend sync
+                                        typingEvent.title += inputChar;
                                     }
                                 }
 
                                 // Handle the end of typing (e.g., pressing Enter)
                                 if (event.key === 'Enter') {
                                     //typingEvent.title += inputChar;
-                                    startDate.setHours(startDate.getHours() + 4)
-                                    endDate.setHours(endDate.getHours() + 4)
+                                    startDate.setHours(startDate.getHours() + baseOffset)
+                                    endDate.setHours(endDate.getHours() + baseOffset)
                                     typingEvent.start = startDate.toISOString();
                                     typingEvent.end =  endDate.toISOString();
                                     ec.updateEvent(typingEvent); 
@@ -279,9 +280,9 @@
 
                  // UTC to Non Utc Conversion 
 
-                 startDate.setHours(startDate.getHours() - 4);
+                 startDate.setHours(startDate.getHours() - baseOffset);
                 if (endDate) {
-                    endDate.setHours(endDate.getHours() - 4);
+                    endDate.setHours(endDate.getHours() - baseOffset);
                 }
 
 
@@ -328,9 +329,9 @@
                 let endDate = typeof event.end === 'string' ? new Date(event.end) : event.end;
 
                 // Adjust the hours for UTC to non-UTC conversion (to match the backend logic)
-                startDate.setHours(startDate.getHours() - 4);
+                startDate.setHours(startDate.getHours() - baseOffset);
                 if (endDate) {
-                    endDate.setHours(endDate.getHours() - 4);
+                    endDate.setHours(endDate.getHours() - baseOffset);
                 }
 
                 return {
