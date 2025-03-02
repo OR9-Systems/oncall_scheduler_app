@@ -3,7 +3,8 @@ from oncallapp import app, db
 from oncallapp.forms import CreateUserGroupForm, CreateScheduleForm, CreateUserForm, CreateScheduleTemplateForm
 from oncallapp.models import UserGroup, Schedule, User, ScheduleTemplate, TemplateEvent
 import uuid
-import datetime
+#import datetime
+from datetime import time, datetime
 from dateutil import parser
 
 @app.route('/')
@@ -111,21 +112,51 @@ def view_schedule():
 def create_template():
     form = CreateScheduleTemplateForm()
 
+    template_id = request.args.get('template_id',None)
+
     # Check if template_id exists in session; if not, create a new unique ID
-    if 'template_id' not in session:
+    if 'template_id' not in session and not template_id:
         # Generate a new UUID or use the Flask session ID
         session['template_id'] = str(uuid.uuid4())  # Using UUID for uniqueness
     print(f"Session ID:{session['template_id']}", flush=True)
 
     # Use the session 'template_id'
-    template_id = session['template_id']
+    template_id = template_id or session['template_id']
     template = ScheduleTemplate.query.filter_by(id=template_id).first()
+    #Auto Calculate the event start and end dates based on the events within the window 
+    print(f"sdate:{str(session)}", flush=True)
+    print(request.form.to_dict(flat=False), flush=True)
+
+
 
     if request.method == 'POST':
         test_mode = request.form.get('test_mode', 'false') == 'true'  # Capture test mode flag
         group_id = request.form.get('group', type=int)
 
+        #Given the condition that we post the 
+        if not form.start_date.data or not form.end_date.data:
+                events = TemplateEvent.query.filter_by(template_id=template_id).all()
+                if events:
+                    start_dates = [event.start for event in events if event.start]
+                    end_dates = [event.end for event in events if event.end]
+                    if start_dates and end_dates:
+                        min_start = min(start_dates)
+                        max_end  = max(end_dates)
+                        #min_start = datetime.combine(min_start.date(), min_start.time() or time(0, 0))
+                        #max_end = datetime.combine(max_end.date(), max_end.time() or time(23, 59))
+
+                        form.start_date.data =min_start
+                        form.end_date.data = max_end  #datetime.strptime(max_end.strftime('%Y-%m-%d %H:%M'), '%Y-%m-%d %H:%M')
+                    else:
+                        flash('Cannot auto-calculate dates: Some events are missing start or end times.', 'error')
+                        return redirect(url_for('create_template'))
+                else:
+                    flash('Cannot auto-calculate dates: No events found.', 'error')
+                    return redirect(url_for('create_template'))
+
         if template:
+
+
             # Updating an existing template
             template.name = form.name.data
             template.start_date = form.start_date.data
@@ -146,11 +177,11 @@ def create_template():
             db.session.commit()
 
         # Sync events from the frontend
-        events_from_frontend = request.json.get('events', [])
-        sync_template_events(template.id, events_from_frontend)
+        #events_from_frontend = request.json.get('events', [])
+        #sync_template_events(template.id, events_from_frontend)
 
         flash('Schedule template created and events synced successfully!')
-        return redirect(url_for('create_template'))
+        return redirect(url_for('view_templates'))
 
     return render_template('create_template.html', form=form, template=template)
 
@@ -226,9 +257,12 @@ def sync_template_events(template_id, received_events):
         if event.id not in received_event_ids:
             db.session.delete(event)
 
-    # Commit changes
     db.session.commit()
-
+    # Reload Existing Events after Commiting Changes
+    #existing_events = TemplateEvent.query.filter_by(template_id=template_id).all()
+    # Query For Existing Template
+    # Commit changes
+    #db.session.commit()
     return {"status": "success"}
 
 @app.route('/view_templates')
@@ -293,8 +327,8 @@ def save_event():
     )
     db.session.add(new_event)
     db.session.commit()
-
     print(f"New event created with ID: {new_event.id}", flush=True)
+    #For each event saved update the initial template dates data so when we save the template we have dates 
     return jsonify({'status': 'success', 'message': 'Event created successfully.', 'event_id': new_event.id})
 
 @app.route('/load_events/<template_id>', methods=['GET'])

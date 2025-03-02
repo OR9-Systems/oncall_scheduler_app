@@ -38,6 +38,7 @@ class CreateUserForm(FlaskForm):
 class CreateScheduleTemplateForm(FlaskForm):
     name = StringField('Template Name', validators=[DataRequired()])
     group = SelectField('User Group', coerce=int, validators=[DataRequired()])
+    #Auto Generated
     start_date = DateTimeField('Start Date', format='%Y-%m-%d %H:%M', validators=[DataRequired()])
     end_date = DateTimeField('End Date', format='%Y-%m-%d %H:%M', validators=[DataRequired()])
     repeat_weekly = BooleanField('Repeat Weekly')
