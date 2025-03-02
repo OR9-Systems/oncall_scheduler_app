@@ -14,6 +14,7 @@
             <th>Start Date</th>
             <th>End Date</th>
             <th>Repeats Weekly</th>
+            <th>Session Id</th>
         </tr>
     </thead>
     <tbody>
@@ -23,6 +24,11 @@
             <td>{{ template.start_date }}</td>
             <td>{{ template.end_date }}</td>
             <td>{{ 'Yes' if template.repeat_weekly else 'No' }}</td>
+            <td>{{ template.id }}</td>
+            <td>
+                <!-- Button to load the template id into the session -->
+                <a href="{{ url_for('create_template', template_id=template.id) }}" class="btn btn-info">Load Template</a>
+            </td>
         </tr>
         {% endfor %}
     </tbody>
