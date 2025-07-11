@@ -82,8 +82,8 @@ def create_schedule_template_from_csv(db_session, csv_content, category):
     db_session.add(template)
     db_session.flush()  # Get template.id
 
-    # Create TemplateEvent entries
-    total= 0
+    # Create TemplateEvent entries # Fix max id bug 
+    total= db_session.query(db_session.query(TemplateEvent.id).order_by(TemplateEvent.id.desc()).limit(1).scalar() or 0).scalar()
     for event in events:
         total = total + 1
         try:
