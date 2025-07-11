@@ -166,7 +166,8 @@
                                             title: inputChar,
                                             start: startDate.toISOString(),  // Use adjusted start date
                                             end: endDate.toISOString(),      // Use adjusted end date
-                                            resourceId: info.resource ? info.resource.id : null
+                                            resourceId: info.resource ? info.resource.id : null,
+                                            allDay:  info.allDay === true,
                                         });
                                         //saveEvent(typingEvent, templateId);  // Save the event to the backend
                                     } else {
@@ -182,6 +183,8 @@
                                     endDate.setHours(endDate.getHours() + baseOffset)
                                     typingEvent.start = startDate.toISOString();
                                     typingEvent.end =  endDate.toISOString();
+                                    typingEvent.allDay =  info.allDay === true;
+                                    typingEvent.resourceId = info.resource ? info.resource.id : null;
                                     ec.updateEvent(typingEvent); 
                                     console.log("Selected time  In End of Function:", info);
                                     saveEvent(typingEvent, templateId);  // Save the event to the backend after typing is done
@@ -229,6 +232,7 @@
                                 title: currentHoveredEvent.title,
                                 start: adjustTime(currentHoveredEvent.start, 0),
                                 end: adjustTime(currentHoveredEvent.end, 0),
+                                allDay: currentHoveredEvent.allDay || false,
                                 resourceId: currentHoveredEventResouceId
                             };
                             notifyUser("Event Copied");
@@ -242,12 +246,14 @@
                                     title: copiedEvent.title,
                                     start: adjustTime(currentHoveredEvent.start, 0),
                                     end: adjustTime(currentHoveredEvent.end, 0),
+                                    allDay: currentHoveredEvent.allDay || false,
                                     resourceId: currentHoveredEventResouceId || copiedEvent.resourcId
                                 })
                                 : ec.addEvent({
                                     title: copiedEvent.title,
                                     start: copiedEvent.start,
                                     end: copiedEvent.end,
+                                    allDay: copiedEvent.allDay || false,
                                     resourceId: currentHoveredEventResouceId || copiedEvent.resourceId
                                 });
 
@@ -313,7 +319,8 @@
                         end: event.end,
                         resourceId: event.resourceId,
                         title: event.title,
-                        color: event.color || 'blue' // Default color if not provided
+                        color: event.color || 'blue',
+                        allDay: event.all_day || false // Default color if not provided
                     }));
                 }
             })
@@ -388,7 +395,8 @@
                     start: startDate.toISOString(),
                     end: endDate ? endDate.toISOString() : null,
                     resourceId: resourceId,
-                    template_id: templateId
+                    template_id: templateId,
+                    all_day:  event.allDay === true,
                 };
 
                 console.log("Saving event to the backend:", eventData);

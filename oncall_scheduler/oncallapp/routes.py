@@ -413,6 +413,7 @@ def save_event():
     end_time_str = event_data.get('end', None)
     resource_id = event_data.get('resourceId', None)
     template_id = event_data.get('template_id', None)
+    all_day = event_data.get('all_day', False)
     
     if not template_id:
         return jsonify({'status': 'error', 'message': 'Template ID is required.'}), 400
@@ -442,6 +443,7 @@ def save_event():
             event.end = end_time
             event.resource_id = resource_id
             event.group_id = event_data.get('group_id', event.group_id)
+            event.all_day = all_day
             db.session.commit()
             print(f"Event {event_id} updated successfully.", flush=True)
             return jsonify({'status': 'success', 'message': 'Event updated successfully.', 'event_id': event.id})
@@ -455,7 +457,8 @@ def save_event():
         resource_id=resource_id,
         template_id=template_id,
         user_id=None,  # Adjust based on your user logic
-        group_id=event_data.get('group_id', None)
+        group_id=event_data.get('group_id', None),
+        all_day=all_day
     )
     db.session.add(new_event)
     db.session.commit()
@@ -504,7 +507,7 @@ def load_events(template_id):
                 'start': event.start.isoformat(),
                 'end': event.end.isoformat() if event.end else None,
                 'resourceId': event.resource_id,
-                'allDay': event.all_day,
+                'all_day': event.all_day,
                 'color': color
             })
 

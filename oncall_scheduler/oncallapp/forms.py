@@ -34,7 +34,6 @@ class ImportScheduleForm(FlaskForm):
                 # Decode event_name *catagory* if it exists
                 if event_name:
                     event_name = event_name.to_ical().decode('utf-8').strip()
-                if event_name:
                     event_types.add(event_name)
                     if event_name not in category_to_tags:
                         category_to_tags[event_name] = []
