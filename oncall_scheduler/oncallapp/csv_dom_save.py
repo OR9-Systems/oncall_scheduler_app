@@ -91,13 +91,14 @@ def create_schedule_template_from_csv(db_session, csv_content, category):
             end_dt = parse_iso_datetime(event['end'])
         except Exception:
             continue
+        all_day =  ((end_dt.date() > start_dt.date()) and (end_dt.time() == time(0, 0)) and start_dt.time() == time(0, 0))
         tevent = TemplateEvent(
             id = total ,
             title=event['attendee'],
             start=start_dt,
             end=end_dt,
             resource_id = 1,
-            all_day=False,
+            all_day=all_day,
             template_id=template.id
         )
         db_session.add(tevent)
