@@ -11,6 +11,7 @@
 
     <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/event-calendar.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/import-cal.css') }}">
     <script src="{{ url_for('static', filename='js/event-calendar.min.js') }}"></script>
     <title>On-Call Scheduler</title>
 
@@ -36,13 +37,19 @@
                         <a class="nav-link" href="{{ url_for('create_schedule') }}">Create Schedule</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('create_user') }}">Create User</a>
+                        <a class="nav-link" href="{{ url_for('create_user') }}">Custom User</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('modify_user') }}">Edit Assignees</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('create_template') }}">Create Schedule Template</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('view_templates') }}">View Schedule Templates</a>
+                    </li>
+                     <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('import_schedule') }}">Import Schedule</a>
                     </li>
                 </ul>
             </div>

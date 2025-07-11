@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Modify User</h1>
+
+{% if error_message %}
+<div class="alert alert-danger">{{ error_message }}</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('modify_user') }}" id="modify-user-form">
+    {{ form.hidden_tag() }}
+    <div class="form-group">
+        {{ form.group.label(class="form-control-label") }}
+        {{ form.group(class="form-control", id="group") }}
+    </div>
+
+   <div class="form-group">
+        {{ form.user.label(class="form-control-label") }}
+        {{ form.user(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.action.label(class="form-control-label") }}
+        {{ form.action(class="form-control") }}
+    </div>
+    <div class="form-group">
+        {{ form.submit(class="btn btn-primary") }}
+    </div>
+</form>
+
+<h2>Available Users</h2>
+<table class="table table-bordered">
+    <thead>
+    <tr>
+        <th>User</th>
+        <th>Add</th>
+        <th>Remove</th>
+    </tr>
+    </thead>
+    <tbody>
+    {% for user in users %}
+    <tr>
+        <td>{{ user }}</td>
+        <td>
+            <form method="POST" action="{{ url_for('modify_user') }}" style="display:inline;">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="user" value="{{ user }}">
+                <input type="hidden" name="group" value="{{ form.group.data }}">
+                <input type="hidden" name="action" value="add">
+                <button type="submit" class="btn btn-success btn-sm">Add</button>
+            </form>
+        </td>
+        <td>
+            <form method="POST" action="{{ url_for('modify_user') }}" style="display:inline;">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="user" value="{{ user }}">
+                <input type="hidden" name="group" value="{{ form.group.data }}">
+                <input type="hidden" name="action" value="remove">
+                <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+            </form>
+        </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<script>
+        document.getElementById('group').addEventListener('change', function() {
+        const selectedGroupId = this.value; // Get the selected group ID
+        const currentUrl = new URL(window.location.href); // Parse the current URL
+        currentUrl.searchParams.set('group', selectedGroupId); // Update the 'group' query parameter
+        window.location.href = currentUrl.toString(); // Redirect to the updated URL
+    });
+</script>
+{% endblock %}

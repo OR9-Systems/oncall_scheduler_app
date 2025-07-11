@@ -1,0 +1,144 @@
+ body {
+      margin: 0;
+      font-family: 'Inter', 'Noto Sans', sans-serif;
+      background-color: #f9fafb;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 40px;
+      border-bottom: 1px solid #eaedf1;
+      background-color: white;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: #101518;
+    }
+
+    .header-left svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .header-right a {
+      color: #101518;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-position: center;
+      background-size: cover;
+    }
+
+    .main-container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px 40px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #101518;
+      margin-bottom: 16px;
+    }
+
+    .dashed-box {
+      border: 2px dashed #d4dce2;
+      padding: 56px 24px;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .dashed-box p {
+      color: #101518;
+      text-align: center;
+      margin: 0;
+    }
+
+    .button {
+      background-color: #eaedf1;
+      color: #101518;
+      border: none;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .radio-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border: 1px solid #d4dce2;
+      border-radius: 12px;
+      padding: 15px;
+    }
+
+    .radio-item input[type="radio"] {
+      width: 20px;
+      height: 20px;
+    }
+
+    .radio-item label {
+      font-size: 14px;
+      color: #101518;
+      font-weight: 500;
+    }
+
+    .unmatched-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      background-color: #eaedf1;
+      color: #101518;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .import-btn-container {
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 20px;
+    }
+
+    h2.section-heading {
+      font-size: 22px;
+      font-weight: bold;
+      color: #101518;
+      margin: 32px 0 8px 0;
+    }
+ 
