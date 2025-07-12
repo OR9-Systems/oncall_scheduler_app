@@ -516,6 +516,51 @@ def load_events(template_id):
 
 
 
+# Possibly more complex conditons later so separate. 
+@app.route('/activate_template/<template_id>', methods=['POST'])
+def activate_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    template.test_mode = True
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Template activated.'})
+
+
+# Possibly more complex conditons later so separate. 
+@app.route('/deactivate_template/<template_id>', methods=['POST'])
+def deactivate_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    template.test_mode = False
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Template deactivated.'})
+
+
+
+@app.route('/delete_template/<template_id>', methods=['DELETE'])
+def delete_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    # Delete associated events
+    TemplateEvent.query.filter_by(template_id=template_id).delete()
+    db.session.delete(template)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Template and related events deleted.'})
+
+
+
+
+
+
+
+
 @app.route('/get_srs_data',methods=['GET'])
 def get_srs_data():
      try:

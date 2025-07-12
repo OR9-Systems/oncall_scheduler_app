@@ -28,6 +28,16 @@
             <td>
                 <!-- Button to load the template id into the session -->
                 <a href="{{ url_for('create_template', template_id=template.id) }}" class="btn btn-info">Load Template</a>
+                <button
+                class="btn btn-sm mb-1 toggle-activation-btn {{ 'btn-warning' if template.test_mode else 'btn-success' }}"
+                data-template-id="{{ template.id }}"
+                data-active="{{ 'true' if template.test_mode else 'false' }}">
+                {{ 'Deactivate' if template.test_mode else 'Activate' }}
+                </button>
+                
+                <!-- Delete Button -->
+                <button class="btn btn-danger btn-sm"
+                    onclick="confirmDeleteTemplate('{{ template.name }}', '{{ template.id }}')">Delete</button>
             </td>
         </tr>
         {% endfor %}
@@ -69,5 +79,46 @@
         });
     });
 </script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.toggle-activation-btn').forEach(button => {
+            button.addEventListener('click', function () {
+                const templateId = this.dataset.templateId;
+                const isActive = this.dataset.active === 'true';
+                const url = isActive
+                    ? `/deactivate_template/${templateId}`
+                    : `/activate_template/${templateId}`;
+
+                fetch(url, {
+                    method: 'POST'
+                })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message);
+                        // Toggle button label and class
+                        this.textContent = isActive ? 'Activate' : 'Deactivate';
+                        this.classList.toggle('btn-success', !isActive);
+                        this.classList.toggle('btn-warning', isActive);
+                        this.dataset.active = (!isActive).toString();
+                    });
+            });
+        });
+    });
+
+    function confirmDeleteTemplate(templateName, templateId) {
+        if (confirm(`Are you sure you want to delete Template '${templateName}' (${templateId})?`)) {
+            fetch(`/delete_template/${templateId}`, {
+                method: 'DELETE'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.message);
+                    location.reload();
+                });
+        }
+    }
+</script>
+
+
 
 {% endblock %}
