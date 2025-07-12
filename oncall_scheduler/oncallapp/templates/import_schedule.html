@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block content %}
+<div>
+  <main class="main-container">
+    <div>
+      <p class="section-title">Import Calendar</p>
+      <form method="POST" enctype="multipart/form-data">
+        {{ form.hidden_tag() }}
+        <div class="dashed-box">
+          <div>
+            <p style="font-size: 18px; font-weight: bold;">Drag and drop your .ics file here</p>
+            <p style="font-size: 14px;">Or browse to select a file from your computer</p>
+          </div>
+
+
+        {{ form.file(class="button", id="file-input") }}
+        </div>
+
+        <h2 class="section-heading">Select Calendar</h2>
+        <div class="radio-list">
+          {% for calendar in form.calendars %}
+          <div class="radio-item">
+            {{ calendar }}
+            <label for="{{ calendar.id }}">{{ calendar.label }}</label>
+          </div>
+          {% endfor %}
+        </div>
+
+        <h2 class="section-heading">Items Found</h2>
+         <div class="unmatched-tags">
+          {% for cat, tags  in matched_tags.items() %}
+          {% for tag  in tags  %}
+          <span class="tag" data-category="{{ cat }}" data-attendee="{{ tag }}">{{ tag }} ({{ tags[tag] }})</span>
+          {% endfor %}
+          {% endfor %}
+        </div>
+      <hr>
+        
+<textarea id="extra_data_text" name="extra_data_text" rows="10" cols="60">
+# Edit only the visible lines. Format: Attendee,Start,End
+{{ form.extra_data_text.data or extra_data_csv }}
+</textarea>
+        <div class="import-btn-container">
+          {{ form.submit(class="button",value="manual_import") }}
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<style>
+  .tag.selected {
+    background-color: #0074d9;
+    color: #fff;
+  }
+
+::file-selector-button {
+  display: none;
+}
+</style>
+<script>
+// Auto-submit on file select (robust for all browsers)
+  let fileInput = document.getElementById('file-input');
+  if (!fileInput) {
+    fileInput = document.querySelector('input[type="file"]');
+  }
+  if (fileInput) {
+    fileInput.addEventListener('change', function () {
+      // Use requestSubmit if available, otherwise use native submit method
+      let form = fileInput.closest('form');
+      if (form) {
+        if (typeof form.requestSubmit === "function") {
+          form.requestSubmit();
+        } else {
+          HTMLFormElement.prototype.submit.call(form);
+        }
+      }
+    });
+  }
+
+
+function setCookie(name, value) {
+  document.cookie = name + "=" + encodeURIComponent(value) + "; path=/";
+}
+function getCookie(name) {
+  let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+  if (match) return decodeURIComponent(match[2]);
+  return null;
+}
+function filterCSV(csv, category, attendees) {
+  const lines = csv.trim().split('\n');
+  let commentLine = '';
+  let headerLine = 0;
+  if (lines[0].startsWith('#')) {
+    commentLine = lines[0];
+    headerLine = 1;
+  }
+  const headers = lines[headerLine].split(',');
+  const catIdx = headers.indexOf('Category');
+  const attIdx = headers.indexOf('Attendee');
+  if (catIdx === -1) return csv;
+  let filtered = lines.slice(headerLine + 1).filter(line => {
+    const cols = line.split(',');
+    if (cols.length < headers.length) return false;
+    if (cols[catIdx].trim() !== category) return false;
+    if (attendees.length > 0 && !attendees.includes(cols[attIdx].trim())) return false;
+    return true;
+  });
+  let result = [];
+  if (commentLine) result.push(commentLine);
+  result.push(headers.join(','));
+  result = result.concat(filtered);
+  return result.join('\n');
+}
+document.addEventListener('DOMContentLoaded', function () {
+  const textArea = document.getElementById('extra_data_text');
+  const tags = document.querySelectorAll('.unmatched-tags .tag');       
+  const radios = document.querySelectorAll('.radio-item input[type="radio"]');
+  let originalCSV = textArea.value;
+  let currentCategory = '';
+  function getSelectedCategory() {
+    const selectedRadio = document.querySelector('.radio-item input[type="radio"]:checked');
+    return selectedRadio ? selectedRadio.value : '';
+  }
+  function getSelectedAttendees() {
+    return Array.from(document.querySelectorAll('.tag.selected[data-category="' + currentCategory + '"]'))
+      .map(tag => tag.dataset.attendee);
+  }
+  function updateTextArea() {
+    const attendees = getSelectedAttendees();
+    const filtered = filterCSV(originalCSV, currentCategory, attendees);
+    textArea.value = filtered;
+    setCookie('extra_data_' + currentCategory + '_' + attendees.join('_'), filtered);
+  }
+  function resetTags() {
+    tags.forEach(tag => {
+      if (tag.dataset.category === currentCategory) {
+        tag.classList.remove('selected');
+        tag.style.display = 'inline-block';
+      } else {
+        tag.style.display = 'none';
+        tag.classList.remove('selected');
+      }
+    });
+  }
+  radios.forEach(radio => {
+    radio.addEventListener('change', function () {
+      currentCategory = this.value;
+      resetTags();
+      // Show only tags for this category
+      tags.forEach(tag => {
+        tag.style.display = tag.dataset.category === currentCategory ? 'inline-block' : 'none';
+
+      });
+      // Reset textarea to all lines for this category
+      const cache = getCookie('extra_data_' + currentCategory + '_');
+      if (cache) {
+        textArea.value = cache;
+      } else {
+        textArea.value = filterCSV(originalCSV, currentCategory, []);
+      }
+    });
+  });
+  tags.forEach(tag => {
+    tag.addEventListener('click', function () {
+      if (tag.dataset.category !== currentCategory) return;
+      tag.classList.toggle('selected');
+      updateTextArea();
+    });
+  });
+  textArea.addEventListener('input', function () {
+    const attendees = getSelectedAttendees();
+    setCookie('extra_data_' + currentCategory + '_' + attendees.join('_'), textArea.value);    
+  });
+  // On page load: set initial state
+  function init() {
+    currentCategory = getSelectedCategory();
+    tags.forEach(tag => {
+      tag.style.display = tag.dataset.category === currentCategory ? 'inline-block' : 'none';  
+      tag.classList.remove('selected');
+    });
+    const cache = getCookie('extra_data_' + currentCategory + '_');
+    if (cache) {
+      textArea.value = cache;
+    } else {
+      textArea.value = filterCSV(originalCSV, currentCategory, []);
+    }
+  }
+  init();
+});
+</script>
+{% endblock %}

@@ -3,7 +3,7 @@
 
 This repository contains a web application designed to be deployed using Docker and Docker Compose. The application is a Flask-based web service and uses PostgreSQL for its database. This README provides instructions for deploying the application with Docker Compose and securely managing secrets using Docker secrets.
 Prerequisites
-
+Test
 - Docker
 - Docker Compose
 

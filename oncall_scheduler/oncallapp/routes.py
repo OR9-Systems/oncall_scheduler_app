@@ -1,11 +1,18 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify, session
 from oncallapp import app, db
-from oncallapp.forms import CreateUserGroupForm, CreateScheduleForm, CreateUserForm, CreateScheduleTemplateForm
+from oncallapp.forms import CreateUserGroupForm, CreateScheduleForm, CreateUserForm, CreateScheduleTemplateForm, ModifyUserForm, ImportScheduleForm
 from oncallapp.models import UserGroup, Schedule, User, ScheduleTemplate, TemplateEvent
+from oncallapp.srs_api import get_srs
+#from oncallapp.parse_ical import parse_ical
+from oncallapp.utils import extra_data_to_csv
+from oncallapp.csv_dom_save import create_schedule_template_from_csv
+
 import uuid
 #import datetime
 from datetime import time, datetime
 from dateutil import parser
+from icalendar import Calendar
+from collections import Counter
 
 @app.route('/')
 def index():
@@ -36,8 +43,10 @@ def create_user():
         print("Form validation failed.", flush=True)
         for field, errors in form.errors.items():
             print(f"Field: {field}, Errors: {errors}", flush=True)
-
-    return render_template('create_user.html', form=form)
+    if request.form.get('redirect') is not None:
+        return jsonify({'status': 'success', 'message': 'User created successfully!'}), 200
+    else:
+        return render_template('create_user.html', form=form)
 
 @app.route('/create_group', methods=['GET', 'POST'])
 def create_group():
@@ -50,6 +59,68 @@ def create_group():
         return redirect(url_for('index'))
     return render_template('create_group.html', form=form)
 
+
+@app.route('/import_schedule', methods=['GET', 'POST'])
+def import_schedule():
+    form = ImportScheduleForm()
+    category_to_tags = {}
+    matched_tags = {}
+    extra_data = {}
+    event_types = set()
+    extra_data_csv = ""
+    csv_data = ""
+    if request.method == 'POST':
+        if request.form.get('submit') == 'manual_import':
+            # Handle manual import
+            csv_data = form.extra_data_text.data.strip()
+            if not csv_data:
+                flash("Please provide extra data in CSV format.", "error")
+                return redirect(url_for('import_schedule'))
+            #remove the first line  of the csv that starts with #
+            if csv_data.startswith('#'):
+                csv_data = '\n'.join(csv_data.split('\n')[1:])
+            
+            category = form.calendars.data
+            try:
+                # Process the manual CSV input call create_schedule_template_from_csv(
+               template = create_schedule_template_from_csv(
+                   db.session,
+                   csv_data,
+                   category
+                   )
+               flash(f"Template '{template.name}' imported successfully!", "success")
+               return redirect(url_for('view_templates'))
+                # Flash success message
+
+            except Exception as e:
+                flash(f"Error processing manual input: {str(e)}", "error")
+                return redirect(url_for('import_schedule'))
+
+
+
+        if form.file.data:
+            uploaded_file = form.file.data
+
+            try:
+                # Read the uploaded file directly without saving it
+                result = form.process_ics_file(uploaded_file, extra_data_to_csv)
+                matched_tags = result["matched_tags"]
+                extra_data = result["extra_data"]
+                extra_data_csv = result["extra_data_csv"]
+                # Flash success message
+                flash(f"File processed successfully! Event types and tags loaded.", "success")
+
+            except Exception as e:
+                flash(f"Error processing file: {str(e)}", "error")
+                return redirect(url_for('import_schedule'))
+
+        else:
+            # Handle form validation errors
+            for field, errors in form.errors.items():
+                flash(f"Field: {field}, Errors: {errors}", "error")
+
+    # Render the import schedule page with updated form
+    return render_template('import_schedule.html', form=form, matched_tags=matched_tags,extra_data=extra_data, extra_data_csv=extra_data_csv)
 
 @app.route('/create_schedule', methods=['GET', 'POST'])
 def create_schedule():
@@ -103,19 +174,80 @@ def ec_works():
 def view_schedule():
     schedules = Schedule.query.all()
     return render_template('view_schedule.html', schedules=schedules)
+@app.route('/modify_user', methods=['GET', 'POST'])
+def modify_user():
+    # Determine the group_id: if None, default to the first group
+    group_id = request.form.get('group', type=int) if request.method == 'POST' else request.args.get('group', type=int)
+    if not group_id:
+        print("NO GROUP ID", flush=True)
+        first_group = UserGroup.query.first()
+        group_id = first_group.id if first_group else None
 
+    form = ModifyUserForm(group_id=group_id)
+    users = []
+    error_message = None
 
+    # Fetch users from get_srs_data endpoint
+    try:
+        response = get_srs_data().get_json()
+        if response.get('status') == 'success':
+            data = eval(response.get('message', '{}'))
+            plans = data.get('plans', [])
+            for plan in plans:
+                plan_users = plan.get('available_users', [])
+                for user in plan_users:
+                    if user not in users:
+                        users.append(user)
+        else:
+            error_message = response.get('message', 'Failed to fetch users.')
+    except Exception as e:
+        error_message = f"Failed to fetch users: {str(e)}"
 
+    # Handle button actions (add/remove) directly
+    if request.method == 'POST' and 'action' in request.form:
+        action = request.form.get('action')
+        user_name = request.form.get('user')
 
+        if action == 'add':
+            # Check if the user already exists in the group
+            existing_user = User.query.filter_by(name=user_name, group_id=group_id).first()
+            if not existing_user:
+                new_user = User(name=user_name, group_id=group_id)
+                db.session.add(new_user)
+                db.session.commit()
+                flash(f"User {user_name} added successfully!")
+            else:
+                flash(f"User {user_name} already exists in the group!", 'error')
+
+        elif action == 'remove':
+            # Query by name and group ID
+            user = User.query.filter_by(name=user_name, group_id=group_id).first()
+            if user:
+                db.session.delete(user)
+                db.session.commit()
+                flash(f"User {user.name} removed successfully!")
+            else:
+                flash(f"User {user_name} not found in group {group_id}!", 'error')
+
+        return redirect(url_for('modify_user', group=group_id))
+
+    # Render the template with the form and users
+    return render_template('modify_user.html', form=form, users=users, error_message=error_message)
 
 @app.route('/create_template', methods=['GET', 'POST'])
 def create_template():
     form = CreateScheduleTemplateForm()
 
     template_id = request.args.get('template_id',None)
+    if template_id and template_id =='new_session':
+        session.clear()
+        template_id=str(uuid.uuid4())
+        session['template_id'] = template_id
+        return redirect(url_for('create_template',template_id=template_id))
+
 
     # Check if template_id exists in session; if not, create a new unique ID
-    if 'template_id' not in session and not template_id:
+    if 'template_id' not in session and not template_id :
         # Generate a new UUID or use the Flask session ID
         session['template_id'] = str(uuid.uuid4())  # Using UUID for uniqueness
     print(f"Session ID:{session['template_id']}", flush=True)
@@ -281,6 +413,7 @@ def save_event():
     end_time_str = event_data.get('end', None)
     resource_id = event_data.get('resourceId', None)
     template_id = event_data.get('template_id', None)
+    all_day = event_data.get('all_day', False)
     
     if not template_id:
         return jsonify({'status': 'error', 'message': 'Template ID is required.'}), 400
@@ -310,6 +443,7 @@ def save_event():
             event.end = end_time
             event.resource_id = resource_id
             event.group_id = event_data.get('group_id', event.group_id)
+            event.all_day = all_day
             db.session.commit()
             print(f"Event {event_id} updated successfully.", flush=True)
             return jsonify({'status': 'success', 'message': 'Event updated successfully.', 'event_id': event.id})
@@ -323,7 +457,8 @@ def save_event():
         resource_id=resource_id,
         template_id=template_id,
         user_id=None,  # Adjust based on your user logic
-        group_id=event_data.get('group_id', None)
+        group_id=event_data.get('group_id', None),
+        all_day=all_day
     )
     db.session.add(new_event)
     db.session.commit()
@@ -335,21 +470,59 @@ def save_event():
 def load_events(template_id):
     # Fetch events for the given template_id
     events = TemplateEvent.query.filter_by(template_id=template_id).all()
-
-    # Prepare events data to return as JSON
+    # Fetch all users and groups
+    users = {user.name for user in User.query.all()}
+    groups = {group.name for group in UserGroup.query.all()}
     events_data = []
+    # When reading events if the name is a substring of a user or group name set the event title to the full name
+
+
+    # When Reading Events Autofill based on the color recognised
+
     for event in events:
+        # When reading events if the name is a substring of a user or group name set the event title to the full name
+        sanitized_title = event.title.replace('\r', '').lower()
+        if len(sanitized_title) >= 0:
+            # Check if the sanitized title is a substring of any user's name
+            matched_user = next((user for user in users if sanitized_title in user.lower()), None)
+            color = None
+            if matched_user:
+                event.title = matched_user  # Update the event title to the full user's name
+                color = 'green'  # Matches a user's name
+            else:
+                # Check if the sanitized title is a substring of any group's name
+                matched_group = next((group for group in groups if sanitized_title in group.lower()), None)
+                if matched_group:
+                    event.title = matched_group  # Update the event title to the full group's name
+                    color = 'purple'  # Matches a group's name
+                else:
+                    color = 'blue'  # Default color for no match
+        else:
+            pass
+
+
         events_data.append({
-            'id': event.id,
-            'title': event.title,
-            'start': event.start.isoformat(),
-            'end': event.end.isoformat() if event.end else None,
-            'resourceId': event.resource_id,
-            'allDay': event.all_day
-        })
+                'id': event.id,
+                'title': event.title,
+                'start': event.start.isoformat(),
+                'end': event.end.isoformat() if event.end else None,
+                'resourceId': event.resource_id,
+                'all_day': event.all_day,
+                'color': color
+            })
 
     # Return the events as a JSON response
     return jsonify(events_data)
+
+
+
+@app.route('/get_srs_data',methods=['GET'])
+def get_srs_data():
+     try:
+        return jsonify({'status': 'success', 'message': f'{get_srs()}'})
+     except Exception as e:
+         return jsonify({'status': 'error', 'message': f'Issue getting Data from service. Error: {str(e)}'}), 400
+
 
 
 @app.route('/delete_event', methods=['DELETE'])

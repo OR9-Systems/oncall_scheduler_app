@@ -32,9 +32,11 @@
     </div>
 </form>
 
-
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css">
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
 <script type="text/javascript">
         let baseOffset =4;
+        let copiedEvent = null;
         function isDSTActive(date = new Date()) {
                 // Get the offset for January (standard time)
                 const janOffset = new Date(date.getFullYear(), 0, 1).getTimezoneOffset();
@@ -51,7 +53,47 @@
 
          let typingEvent = null; // Store reference to the event being typed
          let typingListenerAdded = false;
-         let currentHoveredEvent = null; 
+         let currentHoveredEvent = null;
+         let currentHoveredEventResouceId = null;
+        // Copied and Paste Event
+
+        // Function to show a cool notification
+        function notifyUser(message, type = "success") {
+            let backgroundColor;
+
+            // Define gradient colors for different types
+            switch (type) {
+                case "error":
+                    backgroundColor = "linear-gradient(to right, #ff5f6d, #ffc371)"; // Red gradient
+                    break;
+                case "warning":
+                    backgroundColor = "linear-gradient(to right, #f7b733, #fc4a1a)"; // Orange gradient
+                    break;
+                case "success":
+                    backgroundColor = "linear-gradient(to right, #00b09b, #96c93d)"; // Green gradient
+                    break;
+                default:
+                    backgroundColor = "linear-gradient(to right, #00b09b, #96c93d)"; // Default to success
+            }
+
+            Toastify({
+                text: message,
+                duration: 3000, // 3 seconds
+                gravity: "top", // Position: top or bottom
+                position: "right", // Position: left, center, or right
+                backgroundColor: backgroundColor, // Dynamic gradient
+                stopOnFocus: true, // Pause on hover
+            }).showToast();
+        }
+
+
+        function adjustTime(dateString, offset) {
+            const date = new Date(dateString);
+            date.setHours(date.getHours() + offset);
+            return date.toISOString();
+        }
+
+
         function initCalendar(templateId) {
                 createEvents(templateId).then(events => {
                     console.log("Events to pass into the calendar:", events);
@@ -61,11 +103,11 @@
                         headerToolbar: {
                             start: 'prev,next today',
                             center: 'title',
-                            end: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek resourceTimeGridWeek,resourceTimelineWeek'
+                            end: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek resourceTimeGridWeek,resourceTimelineWeek'//resourceTimelineWeek
                         },
                         resources: [
-                            { id: 1, title: 'Onshore' },
-                            { id: 2, title: 'Offshore' }
+                            { id: 1, title: '4163448031_ContactCL_DEV' },
+                            { id: 2, title: '9058192022_CL_PROD_SUPPORT' }
                         ],
                         scrollTime: '09:00:00',
                         events: events,  // Pass resolved events array here
@@ -76,23 +118,23 @@
                                 pointer: true,
                                 slotMinTime: '09:00',
                                 slotMaxTime: '21:00',
-                                slotWidth: 80,
+                                slotWidth: 60,
                                 resources: [
-                                    { id: 1, title: 'Onshore' },
-                                    { id: 2, title: 'Offshore' },
-                                    { id: 3, title: 'Resource C' },
-                                    { id: 4, title: 'Resource D' },
-                                    { id: 5, title: 'Resource E' },
-                                    { id: 6, title: 'Resource F' },
-                                    { id: 7, title: 'Resource G' },
-                                    { id: 8, title: 'Resource H' },
-                                    { id: 9, title: 'Resource I' },
-                                    { id: 10, title: 'Resource J' },
-                                    { id: 11, title: 'Resource K' },
-                                    { id: 12, title: 'Resource L' },
-                                    { id: 13, title: 'Resource M' },
-                                    { id: 14, title: 'Resource N' },
-                                    { id: 15, title: 'Resource O' }
+                                    { id: 1, title: '4163448031_ContactCL_DEV' },
+                                    { id: 2, title: '9058192022_CL_PROD_SUPPORT' },
+                                   // { id: 3, title: 'Resource C' },
+                                    //{ id: 4, title: 'Resource D' },
+                                    //{ id: 5, title: 'Resource E' },
+                                    //{ id: 6, title: 'Resource F' },
+                                    //{ id: 7, title: 'Resource G' },
+                                    //{ id: 8, title: 'Resource H' },
+                                    //{ id: 9, title: 'Resource I' },
+                                    //{ id: 10, title: 'Resource J' },
+                                    //{ id: 11, title: 'Resource K' },
+                                    //{ id: 12, title: 'Resource L' },
+                                    //{ id: 13, title: 'Resource M' },
+                                    //{ id: 14, title: 'Resource N' },
+                                    //{ id: 15, title: 'Resource O' }
                                 ]
                             }
                         },
@@ -124,7 +166,8 @@
                                             title: inputChar,
                                             start: startDate.toISOString(),  // Use adjusted start date
                                             end: endDate.toISOString(),      // Use adjusted end date
-                                            resourceId: info.resource ? info.resource.id : null
+                                            resourceId: info.resource ? info.resource.id : null,
+                                            allDay:  info.allDay === true,
                                         });
                                         //saveEvent(typingEvent, templateId);  // Save the event to the backend
                                     } else {
@@ -140,6 +183,8 @@
                                     endDate.setHours(endDate.getHours() + baseOffset)
                                     typingEvent.start = startDate.toISOString();
                                     typingEvent.end =  endDate.toISOString();
+                                    typingEvent.allDay =  info.allDay === true;
+                                    typingEvent.resourceId = info.resource ? info.resource.id : null;
                                     ec.updateEvent(typingEvent); 
                                     console.log("Selected time  In End of Function:", info);
                                     saveEvent(typingEvent, templateId);  // Save the event to the backend after typing is done
@@ -156,21 +201,70 @@
                             saveEvent(info.event, templateId);
                         },
                          eventMouseEnter: function (info) {
+                            //console.log("Mousover Info:", info);
                             currentHoveredEvent = info.event;  // Set the hovered event
+                            currentHoveredEventResouceId =  currentHoveredEvent.resourceIds &&  currentHoveredEvent.resourceIds.length > 0
+                                ?  currentHoveredEvent.resourceIds[ currentHoveredEvent.resourceIds.length - 1]
+                                : null;  // Set the hovered event's resource ID
                         },
                         eventMouseLeave: function (info) {
-                            currentHoveredEvent = null; 
+                            currentHoveredEvent = null;
+                            currentHoveredEventResouceId = null;
                             document.removeEventListener('keydown', null);
                          // Clear the hovered event when the mouse leaves
                         }
                             });
-                          document.addEventListener('keydown', (event) => {
-            if ((event.key === 'Backspace' || event.key === 'Delete') && currentHoveredEvent) {
-                console.log("Deleting event with ID:", currentHoveredEvent.id);
-                ec.removeEventById(currentHoveredEvent.id);
-                deleteEvent(currentHoveredEvent.id, templateId);  // Call backend to delete event
-                currentHoveredEvent = null;  // Clear hovered event after deletion
-            }
+
+                    document.addEventListener('keydown', (event) => {
+                        const isDeleteKey = event.key === 'Backspace' || event.key === 'Delete';
+                        const isCopyKey = (event.ctrlKey || event.metaKey) && (event.key === 'c' || event.key === 'C');
+                        const isPasteKey = (event.ctrlKey || event.metaKey) && (event.key === 'v' || event.key === 'V');
+
+                        if (isDeleteKey && currentHoveredEvent) {
+                            console.log("Deleting event with ID:", currentHoveredEvent.id);
+                            ec.removeEventById(currentHoveredEvent.id);
+                            deleteEvent(currentHoveredEvent.id, templateId);
+                            currentHoveredEvent = null;
+                        }
+
+                        if (isCopyKey && currentHoveredEvent) {
+                            copiedEvent = {
+                                title: currentHoveredEvent.title,
+                                start: adjustTime(currentHoveredEvent.start, 0),
+                                end: adjustTime(currentHoveredEvent.end, 0),
+                                allDay: currentHoveredEvent.allDay || false,
+                                resourceId: currentHoveredEventResouceId
+                            };
+                            notifyUser("Event Copied");
+                        }
+
+                        if (isPasteKey && copiedEvent) {
+                            console.log("Pasting copied event:", copiedEvent);
+
+                            const pastedEvent = currentHoveredEvent
+                                ? ec.addEvent({
+                                    title: copiedEvent.title,
+                                    start: adjustTime(currentHoveredEvent.start, 0),
+                                    end: adjustTime(currentHoveredEvent.end, 0),
+                                    allDay: currentHoveredEvent.allDay || false,
+                                    resourceId: currentHoveredEventResouceId || copiedEvent.resourcId
+                                })
+                                : ec.addEvent({
+                                    title: copiedEvent.title,
+                                    start: copiedEvent.start,
+                                    end: copiedEvent.end,
+                                    allDay: copiedEvent.allDay || false,
+                                    resourceId: currentHoveredEventResouceId || copiedEvent.resourceId
+                                });
+
+                            console.log("Pasted event:", pastedEvent);
+                            saveEvent(pastedEvent, templateId);
+                        }
+
+
+
+
+            
 
                     });
                 }).catch(error => {
@@ -224,7 +318,9 @@
                         start: event.start,
                         end: event.end,
                         resourceId: event.resourceId,
-                        title: event.title
+                        title: event.title,
+                        color: event.color || 'blue',
+                        allDay: event.all_day || false // Default color if not provided
                     }));
                 }
             })
@@ -246,7 +342,9 @@
         }
 
         const defaultEvents = [
-            { id: 1, start: days[0] + " 00:00", end: days[0] + " 09:00", resourceId: 1, display: "background", template_id: templateId },
+          /**  
+          // No default events as ids overlap  
+          { id: 1, start: days[0] + " 00:00", end: days[0] + " 09:00", resourceId: 1, display: "background", template_id: templateId },
             { id: 2, start: days[1] + " 12:00", end: days[1] + " 14:00", resourceId: 2, display: "background", template_id: templateId },
             { id: 3, start: days[2] + " 17:00", end: days[2] + " 24:00", resourceId: 1, display: "background", template_id: templateId },
             { id: 4, start: days[0] + " 10:00", end: days[0] + " 14:00", resourceId: 1, title: "The calendar can display background and regular events", color: "#FE6B64", template_id: templateId },
@@ -257,6 +355,7 @@
             { id: 10, start: days[5] + " 14:00", end: days[5] + " 19:00", resourceId: 2, title: "…and you can drag and drop the events!", color: "#FE6B64", template_id: templateId },
             { id: 11, start: days[5] + " 18:00", end: days[5] + " 21:00", resourceId: 2, title: "", color: "#B29DD9", template_id: templateId },
             { id: 12, start: days[1], end: days[3], resourceId: 1, title: "All-day events can be displayed at the top", color: "#B29DD9", allDay: true, template_id: templateId }
+             **/
         ];
 
         console.log("Default events initialized:", defaultEvents);
@@ -275,7 +374,11 @@
             function saveEvent(event, templateId) {
                 let startDate = typeof event.start === 'string' ? new Date(event.start) : event.start;
                 let endDate = typeof event.end === 'string' ? new Date(event.end) : event.end;
-                const resourceId = event.resourceId ? event.resourceId : null;
+                const resourceId = event.resourceIds && event.resourceIds.length > 0
+                    ? event.resourceIds[event.resourceIds.length - 1]
+                    : null;
+                console.log('EVENT BELOW');
+                console.log(event);
 
 
                  // UTC to Non Utc Conversion 
@@ -292,7 +395,8 @@
                     start: startDate.toISOString(),
                     end: endDate ? endDate.toISOString() : null,
                     resourceId: resourceId,
-                    template_id: templateId
+                    template_id: templateId,
+                    all_day:  event.allDay === true,
                 };
 
                 console.log("Saving event to the backend:", eventData);
@@ -339,7 +443,9 @@
                     title: event.title || 'Untitled Event',
                     start: startDate.toISOString(),
                     end: endDate ? endDate.toISOString() : null,
-                    resourceId: event.resourceId || null,
+                    resourceId:  event.resourceIds && event.resourceIds.length > 0
+                        ? event.resourceIds[event.resourceIds.length - 1]
+                        : null,
                     group_id: event.extendedProps.group_id || null,
                     all_day: event.allDay || false
                 };

@@ -18,21 +18,21 @@ services:
       - db_user
       - db_password
       - db_name
-    depends_on:
-      - db
+    #depends_on:
+    #  - db
 
-  db:
-    image: postgres:13
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: oncall_scheduler
-    secrets:
-      - db_user
-      - db_password
-      - db_name
+# db:
+#   image: postgres:13
+#    volumes:
+#      - postgres_data:/var/lib/postgresql/data
+#    environment:
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: password
+#      POSTGRES_DB: oncall_scheduler
+#    secrets:
+#      - db_user
+ #     - db_password
+#      - db_name
 
 volumes:
   postgres_data:

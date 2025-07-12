@@ -4,3 +4,8 @@ Flask-Migrate
 Flask-WTF
 flask-bootstrap
 python-dateutil
+Requests==2.32.3
+urllib3==2.3.0
+beautifulsoup4==4.13.3
+pyOpenSSL==25.0.0
+icalendar

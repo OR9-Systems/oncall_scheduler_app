@@ -34,9 +34,10 @@
     </tbody>
 </table>
 
-<a href="{{ url_for('create_template') }}" class="btn btn-primary">Create New Template</a>
+<a href="{{ url_for('create_template', template_id='new_session') }}"  class="btn btn-primary">Create New Template</a>
 
 <script>
+    
     $(document).ready(function () {
         $('#calendar').fullCalendar({
             editable: true,
