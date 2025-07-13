@@ -23,7 +23,7 @@
         {{ form.action(class="form-control") }}
     </div>
     <div class="form-group">
-        {{ form.submit(class="btn btn-primary") }}
+        {{ form.submit(class="btn btn-primary") }}  <a href="{{ url_for('create_user') }}" class="btn btn-primary"> Custom User</a> <a href="{{ url_for('create_group') }}" class="btn btn-primary"> Custom Group</a>
     </div>
 </form>
 

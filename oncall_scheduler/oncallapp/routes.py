@@ -174,6 +174,7 @@ def ec_works():
 def view_schedule():
     schedules = Schedule.query.all()
     return render_template('view_schedule.html', schedules=schedules)
+
 @app.route('/modify_user', methods=['GET', 'POST'])
 def modify_user():
     # Determine the group_id: if None, default to the first group

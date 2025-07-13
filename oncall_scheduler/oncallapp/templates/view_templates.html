@@ -32,7 +32,7 @@
                 class="btn btn-sm mb-1 toggle-activation-btn {{ 'btn-warning' if template.test_mode else 'btn-success' }}"
                 data-template-id="{{ template.id }}"
                 data-active="{{ 'true' if template.test_mode else 'false' }}">
-                {{ 'Deactivate' if template.test_mode else 'Activate' }}
+                {{ 'Disable' if template.test_mode else 'Activate' }}
                 </button>
                 
                 <!-- Delete Button -->
@@ -96,7 +96,7 @@
                     .then(data => {
                         alert(data.message);
                         // Toggle button label and class
-                        this.textContent = isActive ? 'Activate' : 'Deactivate';
+                        this.textContent = isActive ? 'Activate' : 'Disable';
                         this.classList.toggle('btn-success', !isActive);
                         this.classList.toggle('btn-warning', isActive);
                         this.dataset.active = (!isActive).toString();

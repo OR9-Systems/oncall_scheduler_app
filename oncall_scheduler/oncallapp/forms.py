@@ -109,6 +109,7 @@ class ModifyUserForm(FlaskForm):
         else:
             self.user.choices = []
 
+
 class CreateUserForm(FlaskForm):
     name = StringField('User Name', validators=[DataRequired()])
     group = SelectField('User Group', coerce=int, validators=[DataRequired()])
