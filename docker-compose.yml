@@ -2,7 +2,8 @@ version: '3.8'
 
 services:
   web:
-    build: .
+    #build: .
+    image: oncall_scheduler_app_web
     ports:
       - "5000:5000"
     volumes:
@@ -18,6 +19,8 @@ services:
       - db_user
       - db_password
       - db_name
+      - srs_user
+      - srs_password
     #depends_on:
     #  - db
 
@@ -34,13 +37,18 @@ services:
  #     - db_password
 #      - db_name
 
-volumes:
-  postgres_data:
+#volumes:
+#  postgres_data:
 
 secrets:
   db_user:
-    file: ./secrets/db_user
+   external: true
   db_password:
-    file: ./secrets/db_password
+    external: true
   db_name:
-    file: ./secrets/db_name
+    external: true
+  srs_user:
+    external: true
+  srs_password:
+   external: true
+      
