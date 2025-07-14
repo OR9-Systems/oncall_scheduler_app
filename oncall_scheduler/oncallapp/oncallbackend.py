@@ -15,9 +15,8 @@ logger = logging.getLogger(__name__)
 
 class OnCallScheduler:
     def __init__(self):
-        self.cron = CronTab(user=False)
+        self.cron = CronTab(user=True)
         self.session = db.session  # Assumes Flask app context
-
         self.users = [user.name.lower() for user in User.query.all()]
         self.groups = [group.name.lower() for group in UserGroup.query.all()]
 

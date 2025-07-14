@@ -35,6 +35,20 @@
           {% endfor %}
         </div>
       <hr>
+
+<h2 class="section-heading">Schedule Settings</h2>
+<div class="form-group">
+  <label for="start_time">Default Start Time</label>
+  {{ form.start_time(class="form-control") }}
+</div>
+<div class="form-group">
+  <label for="end_time">Default End Time</label>
+  {{ form.end_time(class="form-control") }}
+</div>
+<div class="form-check">
+  {{ form.each_day(class="form-check-input") }}
+  {{ form.each_day.label(class="form-check-label") }}
+</div>
         
 <textarea id="extra_data_text" name="extra_data_text" rows="10" cols="60">
 # Edit only the visible lines. Format: Attendee,Start,End

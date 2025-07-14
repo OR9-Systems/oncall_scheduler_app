@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, SelectField, DateField, BooleanField, DateTimeField, FileField, RadioField,FieldList,StringField , TextAreaField
-from wtforms.validators import DataRequired
+from wtforms import StringField, SubmitField, SelectField, DateField, BooleanField, DateTimeField, FileField, RadioField,FieldList,StringField , TextAreaField, TimeField
+from wtforms.validators import DataRequired, Optional
 from oncallapp.models import UserGroup, User
 from icalendar import Calendar
 from collections import Counter
@@ -14,6 +14,10 @@ class ImportScheduleForm(FlaskForm):
     calendars = RadioField('Select Calendar', choices=[], validators=[])  # Initially empty, no validation
     matched_tags = FieldList(StringField('Tag'), min_entries=0)  # Placeholder for unmatched tags
     extra_data_text = TextAreaField('Edit Extra Data') #I want this to be what matters
+
+    start_time = TimeField('Start Time (e.g., 02:00)', validators=[Optional()])
+    end_time = TimeField('End Time (e.g., 09:30)', validators=[Optional()])
+    each_day = BooleanField('Create an event for each day in the date range')
     submit = SubmitField('Import Calendar')
     def process_ics_file(self, uploaded_file, extra_data_to_csv):
         category_to_tags = {}
