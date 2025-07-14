@@ -97,6 +97,20 @@
         {% endwith %}
         {% block content %}{% endblock %}
     </div>
+    <nav class="navbar navbar-light bg-light fixed-bottom d-flex d-lg-none justify-content-around border-top">
+        <a class="nav-link text-center" href="{{ url_for('modify_user') }}">
+            <div>👤<br>Users</div>
+        </a>
+        <a class="nav-link text-center" href="{{ url_for('create_template') }}">
+            <div>➕<br>Create</div>
+        </a>
+        <a class="nav-link text-center" href="{{ url_for('view_templates') }}">
+            <div>📄<br>View</div>
+        </a>
+        <a class="nav-link text-center" href="{{ url_for('import_schedule') }}">
+            <div>📥<br>Import</div>
+        </a>
+    </nav>
 
     <!-- Include JS scripts at the bottom for faster page loading -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>

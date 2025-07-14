@@ -5,10 +5,20 @@ import os
 import socket
 from OpenSSL import SSL, crypto
 
+import argparse
 # Get the root Certificate IntactRootCA.crt  Needed for Validating Every Request top of Cert Chain
 hostname =  "srssipt.intact.net"
 port = 443
 CERT_NAME = "IntactRootCA.crt"
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Change SRS assignment for a user")
+    parser.add_argument("--user", required=True, help="Name of the user to assign in SRS")
+    args = parser.parse_args()
+    output = change_srs(args.user, "Contact")
+    output2 = change_srs(args.user, "PROD")
+    print(f"{output} {output2}", flush=True)
 
 def get_cert_chain(hostname,port,cert_name=CERT_NAME):
     context = SSL.Context(SSL.TLS_CLIENT_METHOD)
@@ -170,5 +180,6 @@ def change_srs(user, plan):
 
 
 if __name__ == '__main__':
-    output = change_srs("Orion", "Contact")
-    print(output, flush=True)
+    main()
+    #output = change_srs("Orion", "Contact")
+    #print(output, flush=True)

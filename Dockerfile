@@ -7,6 +7,13 @@ WORKDIR /oncall_scheduler
 # Copy the current directory contents into the container at /oncall_scheduler
 COPY . /oncall_scheduler
 
+ENV TZ=America/Toronto
+
+RUN apt-get update && \
+    apt-get install -y cron nano tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone && \
+    apt-get clean
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r /oncall_scheduler/requirements.txt
 

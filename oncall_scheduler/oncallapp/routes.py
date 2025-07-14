@@ -251,7 +251,7 @@ def create_template():
     if 'template_id' not in session and not template_id :
         # Generate a new UUID or use the Flask session ID
         session['template_id'] = str(uuid.uuid4())  # Using UUID for uniqueness
-    print(f"Session ID:{session['template_id']}", flush=True)
+        print(f"Session ID:{session['template_id']}", flush=True)
 
     # Use the session 'template_id'
     template_id = template_id or session['template_id']
