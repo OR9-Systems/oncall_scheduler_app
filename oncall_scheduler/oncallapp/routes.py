@@ -69,58 +69,63 @@ def import_schedule():
     event_types = set()
     extra_data_csv = ""
     csv_data = ""
+
     if request.method == 'POST':
+        each_day_flag = form.each_day.data 
+        each_day_flag = form.each_day.data
+        start_time = form.start_time.data or time(0, 0)
+        end_time = form.end_time.data or time(0, 0)
+
+
         if request.form.get('submit') == 'manual_import':
             # Handle manual import
             csv_data = form.extra_data_text.data.strip()
             if not csv_data:
                 flash("Please provide extra data in CSV format.", "error")
                 return redirect(url_for('import_schedule'))
-            #remove the first line  of the csv that starts with #
+
+            # Remove first line if it's a comment
             if csv_data.startswith('#'):
                 csv_data = '\n'.join(csv_data.split('\n')[1:])
-            
+
             category = form.calendars.data
             try:
-                # Process the manual CSV input call create_schedule_template_from_csv(
-               template = create_schedule_template_from_csv(
-                   db.session,
-                   csv_data,
-                   category
-                   )
-               flash(f"Template '{template.name}' imported successfully!", "success")
-               return redirect(url_for('view_templates'))
-                # Flash success message
+                template = create_schedule_template_from_csv(
+                    db.session,
+                    csv_data,
+                    category,
+                    each_day=each_day_flag,
+                    default_start_time=start_time,
+                    default_end_time=end_time
+                )
+                flash(f"Template '{template.name}' imported successfully!", "success")
+                return redirect(url_for('view_templates'))
 
             except Exception as e:
                 flash(f"Error processing manual input: {str(e)}", "error")
                 return redirect(url_for('import_schedule'))
 
-
-
         if form.file.data:
             uploaded_file = form.file.data
-
             try:
-                # Read the uploaded file directly without saving it
                 result = form.process_ics_file(uploaded_file, extra_data_to_csv)
                 matched_tags = result["matched_tags"]
                 extra_data = result["extra_data"]
                 extra_data_csv = result["extra_data_csv"]
-                # Flash success message
                 flash(f"File processed successfully! Event types and tags loaded.", "success")
 
             except Exception as e:
                 flash(f"Error processing file: {str(e)}", "error")
                 return redirect(url_for('import_schedule'))
-
         else:
-            # Handle form validation errors
             for field, errors in form.errors.items():
                 flash(f"Field: {field}, Errors: {errors}", "error")
 
-    # Render the import schedule page with updated form
-    return render_template('import_schedule.html', form=form, matched_tags=matched_tags,extra_data=extra_data, extra_data_csv=extra_data_csv)
+    return render_template('import_schedule.html', form=form,
+                           matched_tags=matched_tags,
+                           extra_data=extra_data,
+                           extra_data_csv=extra_data_csv)
+
 
 @app.route('/create_schedule', methods=['GET', 'POST'])
 def create_schedule():
@@ -174,6 +179,7 @@ def ec_works():
 def view_schedule():
     schedules = Schedule.query.all()
     return render_template('view_schedule.html', schedules=schedules)
+
 @app.route('/modify_user', methods=['GET', 'POST'])
 def modify_user():
     # Determine the group_id: if None, default to the first group
@@ -250,7 +256,7 @@ def create_template():
     if 'template_id' not in session and not template_id :
         # Generate a new UUID or use the Flask session ID
         session['template_id'] = str(uuid.uuid4())  # Using UUID for uniqueness
-    print(f"Session ID:{session['template_id']}", flush=True)
+        print(f"Session ID:{session['template_id']}", flush=True)
 
     # Use the session 'template_id'
     template_id = template_id or session['template_id']
@@ -513,6 +519,51 @@ def load_events(template_id):
 
     # Return the events as a JSON response
     return jsonify(events_data)
+
+
+
+# Possibly more complex conditons later so separate. 
+@app.route('/activate_template/<template_id>', methods=['POST'])
+def activate_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    template.test_mode = True
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Template activated.'})
+
+
+# Possibly more complex conditons later so separate. 
+@app.route('/deactivate_template/<template_id>', methods=['POST'])
+def deactivate_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    template.test_mode = False
+    db.session.commit()
+    return jsonify({'status': 'success', 'message': 'Template deactivated.'})
+
+
+
+@app.route('/delete_template/<template_id>', methods=['DELETE'])
+def delete_template(template_id):
+    template = ScheduleTemplate.query.get(template_id)
+    if not template:
+        return jsonify({'status': 'error', 'message': 'Template not found.'}), 404
+
+    # Delete associated events
+    TemplateEvent.query.filter_by(template_id=template_id).delete()
+    db.session.delete(template)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Template and related events deleted.'})
+
+
+
+
+
 
 
 

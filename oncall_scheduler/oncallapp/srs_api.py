@@ -5,10 +5,20 @@ import os
 import socket
 from OpenSSL import SSL, crypto
 
+import argparse
 # Get the root Certificate IntactRootCA.crt  Needed for Validating Every Request top of Cert Chain
 hostname =  "srssipt.intact.net"
 port = 443
 CERT_NAME = "IntactRootCA.crt"
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Change SRS assignment for a user")
+    parser.add_argument("--user", required=True, help="Name of the user to assign in SRS")
+    args = parser.parse_args()
+    output = change_srs(args.user, "Contact")
+    output2 = change_srs(args.user, "PROD")
+    print(f"{output} {output2}", flush=True)
 
 def get_cert_chain(hostname,port,cert_name=CERT_NAME):
     context = SSL.Context(SSL.TLS_CLIENT_METHOD)
@@ -41,15 +51,15 @@ def get_root(override_hostname=None,override_port=None,override_cert_name=None):
 class SRSService:
     def __init__(self):
         self.session = requests.Session()
-        self.session.trust_env = True
-        CERT_PATH =  'IntactRootCA.crt'
-        if not os.path.exists(CERT_PATH):
-            get_root()
+       # self.session.trust_env = True
+       # CERT_PATH =  'IntactRootCA.crt'
+       # if not os.path.exists(CERT_PATH):
+       #     get_root()
         #Root Exists
-        self.session.verify = CERT_PATH
+       # self.session.verify = CERT_PATH
         self.base_url = "https://srssipt.intact.net/crp/"
-        self.srs_user =  open('../secrets/srs_user', 'r').read().strip()
-        self.srs_password = open('../secrets/srs_password', 'r').read().strip()
+        self.srs_user =  open('/run/secrets/srs_user', 'r').read().strip()
+        self.srs_password = open('/run/secrets/srs_password', 'r').read().strip()
 
     def login(self):
         # Perform login and store cookies in the session
@@ -170,5 +180,6 @@ def change_srs(user, plan):
 
 
 if __name__ == '__main__':
-    output = change_srs("Orion", "Contact")
-    print(output, flush=True)
+    main()
+    #output = change_srs("Orion", "Contact")
+    #print(output, flush=True)

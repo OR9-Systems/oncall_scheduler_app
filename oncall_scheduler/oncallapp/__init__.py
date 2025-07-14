@@ -9,4 +9,4 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///oncall_scheduler.db'
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
-from oncallapp import routes, models
+from oncallapp import routes, models, oncallbackend
